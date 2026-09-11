@@ -20,6 +20,7 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.publish.PublishingExtension
@@ -83,6 +84,23 @@ constructor(private val softwareComponentFactory: SoftwareComponentFactory) : Pl
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
 
+    fun MavenArtifactRepository.configureAcceldataRepoCredentials() {
+      val usernameProvider =
+        providers
+          .gradleProperty("acceldataRepoUsername")
+          .orElse(providers.environmentVariable("ACCELDATA_REPO_USERNAME"))
+      val passwordProvider =
+        providers
+          .gradleProperty("acceldataRepoPassword")
+          .orElse(providers.environmentVariable("ACCELDATA_REPO_PASSWORD"))
+      if (usernameProvider.isPresent && passwordProvider.isPresent) {
+        credentials {
+          username = usernameProvider.get()
+          password = passwordProvider.get()
+        }
+      }
+    }
+
     // Generate a source tarball for a release to be uploaded to
     // https://dist.apache.org/repos/dist/dev/<name>/apache-<name>-<version-with-rc>/
     if (project == rootProject) {
@@ -112,6 +130,19 @@ constructor(private val softwareComponentFactory: SoftwareComponentFactory) : Pl
 
     plugins.withType<MavenPublishPlugin>().configureEach {
       configure<PublishingExtension> {
+        // Maven distributionManagement equivalent (Acceldata ODP staging).
+        repositories {
+          maven {
+            name = "nexusReleases"
+            url = uri("https://repo1.acceldata.dev/repository/odp-staging-release/")
+            configureAcceldataRepoCredentials()
+          }
+          maven {
+            name = "nexusSnapshots"
+            url = uri("https://repo1.acceldata.dev/repository/odp-staging-snapshot/")
+            configureAcceldataRepoCredentials()
+          }
+        }
         publications {
           register<MavenPublication>("maven") {
             val mavenPublication = this

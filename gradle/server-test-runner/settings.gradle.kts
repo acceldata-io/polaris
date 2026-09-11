@@ -19,6 +19,18 @@
 
 pluginManagement { repositories { gradlePluginPortal() } }
 
-dependencyResolutionManagement { repositories { mavenCentral() } }
+dependencyResolutionManagement {
+  repositories {
+    maven {
+      name = "acceldata"
+      url = uri("https://repo1.acceldata.dev/repository/odp-staging-central/")
+    }
+    maven {
+      name = "acceldataStaging"
+      url = uri("https://repo1.acceldata.dev/repository/odp-staging-central/")
+    }
+    mavenCentral()
+  }
+}
 
 rootProject.name = "polaris-server-test-runner"
