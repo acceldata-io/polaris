@@ -128,9 +128,42 @@ plugins {
   id("com.gradle.common-custom-user-data-gradle-plugin") version "2.8.0"
 }
 
+fun MavenArtifactRepository.acceldataCredentials() {
+  val usernameProvider =
+    providers
+      .gradleProperty("mavenUsername")
+      .orElse(providers.gradleProperty("acceldataRepoUsername"))
+      .orElse(providers.environmentVariable("ACCELDATA_REPO_USERNAME"))
+  val passwordProvider =
+    providers
+      .gradleProperty("mavenPassword")
+      .orElse(providers.gradleProperty("acceldataRepoPassword"))
+      .orElse(providers.environmentVariable("ACCELDATA_REPO_PASSWORD"))
+  if (usernameProvider.isPresent && passwordProvider.isPresent) {
+    credentials {
+      username = usernameProvider.get()
+      password = passwordProvider.get()
+    }
+  }
+}
+
+fun RepositoryHandler.addAcceldataRepositories() {
+  maven {
+    name = "acceldata"
+    url = uri("https://repo1.acceldata.dev/repository/odp-staging-central/")
+    acceldataCredentials()
+  }
+  maven {
+    name = "acceldataStaging"
+    url = uri("https://repo1.acceldata.dev/repository/odp-staging-central/")
+    acceldataCredentials()
+  }
+}
+
 dependencyResolutionManagement {
   repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
   repositories {
+    addAcceldataRepositories()
     mavenCentral()
     val useApacheSnapshots =
       providers.gradleProperty("useApacheSnapshots").orNull?.toBoolean() == true
