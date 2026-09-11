@@ -33,13 +33,13 @@ weight: 900
 
 ### Image
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| image.repository | string | `"apache/polaris"` | The image repository to pull from. |
-| image.pullPolicy | string | `"IfNotPresent"` | The image pull policy. |
-| image.tag | string | `"1.6.0.3.3.6.6"` | The image tag. |
-| image.configDir | string | `"/deployments/config"` | The path to the directory where the application.properties file, and other configuration files, if any, should be mounted. |
-| imagePullSecrets | list | `[]` | References to secrets in the same namespace to use for pulling any of the images used by this chart. Each entry is a string referring to an existing secret in the namespace. The secret must contain a `.dockerconfigjson` key with a base64-encoded Docker configuration file. See [Pulling from Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for more information. |
+| Key | Type | Default                    | Description |
+|-----|------|----------------------------|-------------|
+| image.repository | string | `"apache/polaris"`         | The image repository to pull from. |
+| image.pullPolicy | string | `"IfNotPresent"`           | The image pull policy. |
+| image.tag | string | `"1.6.0.3.3.6.5-SNAPSHOT"` | The image tag. |
+| image.configDir | string | `"/deployments/config"`    | The path to the directory where the application.properties file, and other configuration files, if any, should be mounted. |
+| imagePullSecrets | list | `[]`                       | References to secrets in the same namespace to use for pulling any of the images used by this chart. Each entry is a string referring to an existing secret in the namespace. The secret must contain a `.dockerconfigjson` key with a base64-encoded Docker configuration file. See [Pulling from Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for more information. |
 
 ### Service Account
 

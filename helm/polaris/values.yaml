@@ -34,7 +34,7 @@ image:
   pullPolicy: IfNotPresent
   # -- The image tag.
   # @section -- Image
-  tag: "1.6.0.3.3.6.6"
+  tag: "1.6.0.3.3.6.5-SNAPSHOT"
   # -- The path to the directory where the application.properties file, and other configuration
   # files, if any, should be mounted.
   # @section -- Image
