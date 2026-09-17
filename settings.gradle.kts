@@ -165,6 +165,7 @@ fun RepositoryHandler.addAcceldataRepositories() {
 dependencyResolutionManagement {
   repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
   repositories {
+    mavenLocal()
     addAcceldataRepositories()
     mavenCentral()
     val useApacheSnapshots =
