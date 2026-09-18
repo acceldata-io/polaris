@@ -570,9 +570,13 @@ polaris --host "${POLARIS_HOST}" --port 8181 \
 
 ### 4.3 AuthZ bootstrap + Iceberg use cases
 
-Run section 3.4–3.5, then section **12 (Iceberg)** and section **13 (non-Iceberg)** against Spark 3
-and Spark 4 with `warehouse=${CATALOG_NAME}` and FILE-friendly packages (no AWS bundle required for
-pure `file://`).
+Run sections **3.4–3.6** (principal/roles/privileges, catalog config, **CLI namespaces**), then
+section **12 (Iceberg)** and section **13 (non-Iceberg)** against Spark 3 and Spark 4 with
+`warehouse=${CATALOG_NAME}` and FILE-friendly packages (no AWS bundle required for pure `file://`).
+
+§3.6 creates `smoke_ns` / `smoke_ns.schema1` via the Polaris CLI. §12.4 uses the same names with
+`CREATE NAMESPACE IF NOT EXISTS`, so Spark is idempotent if the CLI step already ran — but do **not**
+skip §3.6; it is the CLI namespace smoke on the core path.
 
 ### 4.4 Cleanup / notes
 
@@ -647,7 +651,7 @@ Same as combo A with a distinct name:
 
 ```shell
 export CATALOG_NAME=smoke_file_pg
-# create FILE catalog → principal/roles → sections 12–13
+# create FILE catalog → §3.4–3.6 → sections 12–13
 ```
 
 **Restart durability check:** Restart Polaris, re-fetch token, `catalogs get ${CATALOG_NAME}` still
@@ -665,7 +669,8 @@ Shared Polaris start notes:
 
 - Ensure `S3` is in `SUPPORTED_CATALOG_STORAGE_TYPES` (default includes S3).
 - Pass storage credentials into the **Polaris server process** as required by each backend.
-- After catalog create: §3.4–3.5, then §12 (Iceberg) and §13 (non-Iceberg / Delta on `s3://`).
+- After catalog create: §3.4–3.6 (roles, config, CLI namespaces), then §12 (Iceberg) and §13
+  (non-Iceberg / Delta on `s3://`).
 
 ### 6.1 Combo C1 — AWS S3 (IAM role + vended credentials)
 
@@ -824,7 +829,7 @@ polaris --host "${POLARIS_HOST}" --port 8181 \
 
 #### AuthZ + Iceberg / non-Iceberg
 
-Section 3.4–3.5, then sections 12–13 with Ozone packages (`iceberg-aws-bundle` or equivalent) and
+Section 3.4–3.6, then sections 12–13 with Ozone packages (`iceberg-aws-bundle` or equivalent) and
 **without** vended-credentials header. Repeat key §12.4 and §13 Delta checks against Ozone paths.
 
 ---
@@ -1115,11 +1120,15 @@ version if the coordinate above differs.
 
 ### 12.4 SQL checklist
 
-Run inside `spark-sql` after `USE polaris;`:
+Run inside `spark-sql` after `USE polaris;`.
+
+If you already ran **§3.6**, `smoke_ns` / `smoke_ns.schema1` exist and rows 2–3 below are no-ops
+(`IF NOT EXISTS`). If you skipped the CLI step, rows 2–3 create them here — prefer running §3.6
+first so the CLI namespace path is covered.
 
 | # | Use case | SQL / action | Expected |
 |---|---|---|---|
-| 1 | List namespaces | `SHOW NAMESPACES;` | Succeeds (may be empty) |
+| 1 | List namespaces | `SHOW NAMESPACES;` | Succeeds; after §3.6 includes `smoke_ns` |
 | 2 | Create namespace | `CREATE NAMESPACE IF NOT EXISTS smoke_ns;` | OK |
 | 3 | Nested namespace | `CREATE NAMESPACE IF NOT EXISTS smoke_ns.schema1;` | OK |
 | 4 | Create table | `CREATE TABLE smoke_ns.schema1.t1 (id BIGINT, data STRING) USING iceberg;` | OK |
