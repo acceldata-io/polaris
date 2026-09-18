@@ -45,7 +45,81 @@ every step in that combo’s section passes.
 
 ## 1. Prerequisites
 
-### 1.1 Services on this host
+Polaris server modules require **Java 21+**. On a shared host (RHEL 8/9 or Ubuntu 20/22) other
+Apache components (Hadoop, Hive, Spark, Ranger, Ozone) often need **Java 8 or 11**. Install Java 21
+**side by side** and point only the Polaris process at it via `JAVA_HOME` — do not change the
+system-wide default JDK used by those other services.
+
+`bin/server` (and `bin/admin`) resolve Java as `${JAVA_HOME}/bin/java` when `JAVA_HOME` is set,
+otherwise the first `java` on `PATH`.
+
+### 1.1 Install Java 21 (side by side)
+
+#### Option A — Distro OpenJDK packages
+
+**RHEL 8 / RHEL 9 (and compatible):**
+
+```shell
+# RHEL 9 / recent AppStream
+sudo dnf install -y java-21-openjdk java-21-openjdk-devel
+
+# If java-21-* is not in your enabled repos on RHEL 8, use Option B (Temurin) instead.
+rpm -q java-21-openjdk
+ls /usr/lib/jvm/
+```
+
+**Ubuntu 22.04:**
+
+```shell
+sudo apt-get update
+sudo apt-get install -y openjdk-21-jdk
+update-java-alternatives -l | grep 21 || true
+ls /usr/lib/jvm/
+```
+
+**Ubuntu 20.04:** `openjdk-21` is often unavailable in the default archives. Prefer **Option B**
+(Temurin) or another vendor JDK 21 build.
+
+#### Option B — Eclipse Temurin 21 (portable; recommended on mixed hosts)
+
+Works the same on RHEL 8/9 and Ubuntu 20/22 without changing the default `java` alternatives.
+
+```shell
+# Example: unpack a Temurin 21 JDK under /opt (adjust URL/version to a current build)
+sudo mkdir -p /opt/java
+cd /tmp
+# Download Temurin 21 Linux x64 JDK from https://adoptium.net/ (or your mirror), then:
+# sudo tar -xzf OpenJDK21U-jdk_x64_linux_hotspot_*.tar.gz -C /opt/java
+# sudo mv /opt/java/jdk-21* /opt/java/jdk-21
+
+# Or use the Adoptium RPM/DEB packages if you manage hosts with package managers.
+```
+
+Leave Hadoop/Hive/Spark on their existing JDK (8/11/17). Do **not** run
+`alternatives --set java ...` / `update-alternatives --config java` to Java 21 unless you intend
+every service on the box to use 21.
+
+#### Verify Java 21 for Polaris only
+
+```shell
+# Pick the JDK 21 home for this shell (examples — use the path that exists on your host)
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # RHEL package layout (may be java-21-openjdk-21.*)
+# export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64   # Ubuntu 22.04 package layout
+# export JAVA_HOME=/opt/java/jdk-21                     # Temurin under /opt
+
+export PATH="${JAVA_HOME}/bin:${PATH}"
+
+"${JAVA_HOME}/bin/java" -version
+# Expected: openjdk version "21...." (or Temurin 21)
+
+# Confirm other services still see their own Java when JAVA_HOME is unset in a fresh shell:
+# (hadoop/hive/spark scripts should keep using their configured JAVA_HOME)
+```
+
+**Expected:** `java -version` in the Polaris shell reports 21.x. A login shell without this
+`JAVA_HOME` still runs the cluster’s previous default for other components.
+
+### 1.2 Services on this host
 
 Confirm the co-located stack is up before starting Polaris:
 
@@ -60,7 +134,7 @@ Confirm the co-located stack is up before starting Polaris:
 | Ranger Admin | `curl -sS http://<ranger-host>:6080` | Needed for Ranger authZ combos |
 | Spark 3 / Spark 4 | `$SPARK3_HOME/bin/spark-sql --version`, `$SPARK4_HOME/bin/spark-sql --version` | Iceberg SQL smoke |
 
-### 1.2 Client tools
+### 1.3 Client tools
 
 ```shell
 # jq for token parsing
@@ -71,11 +145,15 @@ pip install -U apache-polaris
 polaris --help
 ```
 
-### 1.3 Environment variables
+### 1.4 Environment variables
 
-Export once per shell. Adjust hostnames, paths, and secrets for your cluster.
+Export once per **Polaris** shell. Adjust hostnames, paths, and secrets for your cluster.
 
 ```shell
+# Java 21 for Polaris only (required when the host default JDK is 8/11/17)
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # or Temurin / Ubuntu path from §1.1
+export PATH="${JAVA_HOME}/bin:${PATH}"
+
 export POLARIS_HOST=localhost
 export POLARIS_API=http://${POLARIS_HOST}:8181
 export POLARIS_MGMT=http://${POLARIS_HOST}:8182
@@ -133,9 +211,9 @@ export SPARK4_HOME=${SPARK4_HOME:-/opt/spark4}
 export ICEBERG_VERSION=${ICEBERG_VERSION:-1.10.0}
 ```
 
-### 1.4 Build Polaris (standalone)
+### 1.5 Build Polaris (standalone)
 
-From the Polaris source tree:
+From the Polaris source tree (same Java 21 shell as §1.1 / §1.4):
 
 ```shell
 cd ~/polaris   # or your checkout path
@@ -161,6 +239,48 @@ Binaries without `-PNonRESTCatalogs=HIVE` reject `connectionType: HIVE`.
 
 Locate the runnable bits under `runtime/server/build/` and `runtime/admin/build/` (Quarkus app
 layout) or use `./gradlew run` / `bin/server` from a binary distribution.
+
+### 1.6 Start `bin/server` with Java 21
+
+From an extracted Polaris binary/distribution directory (or the assembled distro layout):
+
+```shell
+# Ensure this shell uses Java 21 — critical on hosts where `java` defaults to 8/11
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # adjust per §1.1
+export PATH="${JAVA_HOME}/bin:${PATH}"
+"${JAVA_HOME}/bin/java" -version   # must show 21.x
+
+# Optional JVM / Polaris flags (metastore, FILE storage, ports, etc.)
+export POLARIS_JAVA_OPTS='
+  -Xms512m -Xmx2g
+  -Dpolaris.persistence.type=in-memory
+  -Dpolaris.authentication.type=internal
+  -Dpolaris.authorization.type=internal
+  -Dpolaris.bootstrap.credentials=POLARIS,root,s3cr3t
+  -Dpolaris.features."ALLOW_INSECURE_STORAGE_TYPES"=true
+  -Dpolaris.features."SUPPORTED_CATALOG_STORAGE_TYPES"=["FILE","S3","GCS","AZURE"]
+  -Dpolaris.readiness.ignore-severe-issues=true
+'
+
+# Run from the distribution root (directory that contains bin/ and server/)
+cd /path/to/polaris-bin-<version>   # or your installed distro path
+bin/server
+```
+
+Admin tool (bootstrap) must use the **same** Java 21:
+
+```shell
+export JAVA_HOME=...   # same as above
+POLARIS_JAVA_OPTS="-Dpolaris.persistence.type=relational-jdbc ..." \
+  bin/admin bootstrap -r POLARIS -c POLARIS,root,s3cr3t
+```
+
+**Expected:** Process starts; logs show Quarkus listening on **8181** (API) and **8182** (management).
+If startup fails with unsupported class-file / `UnsupportedClassVersionError`, `JAVA_HOME` still
+points at an older JDK — fix §1.1 and retry.
+
+**systemd tip (optional):** set `Environment=JAVA_HOME=/usr/lib/jvm/java-21-openjdk` (or Temurin path)
+in the Polaris unit file only, so Hadoop/Hive units keep their own `JAVA_HOME`.
 
 ---
 
