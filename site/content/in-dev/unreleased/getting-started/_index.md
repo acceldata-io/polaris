@@ -33,6 +33,8 @@ Choose the method that best fits your needs:
 
 - **[Quickstart]({{% relref "quick-start" %}})**: Use Docker Compose to quickly start Polaris with a pre-configured setup. This is ideal for trying out Polaris without installing dependencies.
 
+- **[Smoke Tests]({{% relref "smoke-tests" %}})**: Manual checklist for verifying a standalone Polaris server against local FILE, Postgres, Ozone, Hive/Hadoop federation, Ranger, and Spark Iceberg use cases.
+
 - **[Setup Tools]({{% relref "setup-tools" %}})**: Use infrastructure-as-code to manage Polaris configuration at scale.
 
 ## Getting Help
