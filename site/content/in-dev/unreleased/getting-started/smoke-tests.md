@@ -1387,6 +1387,8 @@ Non-Iceberg:
 [ ] Non-Iceberg authZ allow + deny (internal and/or Ranger)
 
 Health:
+[ ] Java 21 via JAVA_HOME for Polaris (`java -version` shows 21.x)
+[ ] bin/server (or gradle run) started with that JDK
 [ ] /q/health UP
 [ ] OAuth root token
 [ ] OAuth bad-secret rejected
