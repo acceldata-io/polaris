@@ -1139,16 +1139,67 @@ first so the CLI namespace path is covered.
 | 9 | Insert after evolve | `INSERT INTO smoke_ns.schema1.t1 VALUES (3, 'c', NULL);` | OK |
 | 10 | View | `CREATE VIEW smoke_ns.schema1.v1 AS SELECT id, data FROM smoke_ns.schema1.t1;` `SELECT * FROM smoke_ns.schema1.v1;` | Rows visible |
 | 11 | Time travel (Spark Iceberg) | Inspect snapshots then `SELECT * FROM smoke_ns.schema1.t1 VERSION AS OF <snapshot_id>;` or `... TIMESTAMP AS OF '<ts>';` | Prior snapshot rows |
-| 12 | Partitioned table | `CREATE TABLE smoke_ns.schema1.t_part (id BIGINT, day STRING) USING iceberg PARTITIONED BY (day);` `INSERT INTO ...` `SELECT ...` | OK |
-| 13 | Drop view / table / ns | `DROP VIEW ...;` `DROP TABLE ... PURGE;` `DROP NAMESPACE ...` | Clean removal |
-| 14 | AuthZ revoke (internal authZ only) | Revoke `CATALOG_MANAGE_CONTENT`, retry `INSERT` | `ForbiddenException` |
-| 15 | AuthZ restore | Re-grant privilege / fix Ranger policy, retry | Insert works again |
+| 12 | Partitioned table | `CREATE TABLE smoke_ns.schema1.t_part (id BIGINT, day STRING) USING iceberg PARTITIONED BY (day);` `INSERT INTO smoke_ns.schema1.t_part VALUES (1, '2026-01-01'), (2, '2026-01-02');` `SELECT * FROM smoke_ns.schema1.t_part ORDER BY id;` | Two rows |
+| 13 | Drop view / table / ns | `DROP VIEW IF EXISTS smoke_ns.schema1.v1;` `DROP TABLE IF EXISTS smoke_ns.schema1.t_part PURGE;` `DROP TABLE IF EXISTS smoke_ns.schema1.t1 PURGE;` `DROP NAMESPACE IF EXISTS smoke_ns.schema1 CASCADE;` `DROP NAMESPACE IF EXISTS smoke_ns CASCADE;` | Clean removal |
+| 14 | AuthZ revoke (internal authZ only) | Outside Spark, revoke privilege (see commands below), then in Spark: `INSERT INTO smoke_ns.schema1.t1 VALUES (99, 'denied');` — recreate namespace/table first if you already ran row 13 | `ForbiddenException` |
+| 15 | AuthZ restore | Re-grant `CATALOG_MANAGE_CONTENT` (same as §3.4 grant, or commands below), retry the `INSERT` from row 14 | Insert succeeds |
+
+For **rows 14–15** (internal authZ), use the Polaris CLI with the **root** credentials from §3.4.
+Do this **before** dropping objects in row 13, or recreate `smoke_ns.schema1.t1` after restore if you
+already dropped.
+
+**Row 14 — revoke** (mirrors the grant in §3.4):
+
+```shell
+polaris --host "${POLARIS_HOST}" --port 8181 \
+  --client-id "${CLIENT_ID}" --client-secret "${CLIENT_SECRET}" \
+  privileges catalog revoke \
+  --catalog "${CATALOG_NAME}" \
+  --catalog-role smoke_catalog_role \
+  CATALOG_MANAGE_CONTENT
+```
+
+Then retry a write in the Spark session that uses `${USER_CLIENT_ID}:${USER_CLIENT_SECRET}`:
+
+```sql
+-- Recreate if needed after earlier drops:
+-- CREATE NAMESPACE IF NOT EXISTS smoke_ns;
+-- CREATE NAMESPACE IF NOT EXISTS smoke_ns.schema1;
+-- CREATE TABLE IF NOT EXISTS smoke_ns.schema1.t1 (id BIGINT, data STRING) USING iceberg;
+INSERT INTO smoke_ns.schema1.t1 VALUES (99, 'denied');
+```
+
+**Expected:** `org.apache.iceberg.exceptions.ForbiddenException` (or equivalent authorization error).
+
+**Row 15 — restore** (same grant as §3.4):
+
+```shell
+polaris --host "${POLARIS_HOST}" --port 8181 \
+  --client-id "${CLIENT_ID}" --client-secret "${CLIENT_SECRET}" \
+  privileges catalog grant \
+  --catalog "${CATALOG_NAME}" \
+  --catalog-role smoke_catalog_role \
+  CATALOG_MANAGE_CONTENT
+```
+
+```sql
+INSERT INTO smoke_ns.schema1.t1 VALUES (99, 'allowed');
+SELECT * FROM smoke_ns.schema1.t1 WHERE id = 99;
+```
+
+**Expected:** Insert and select succeed. For **Ranger** combos (G/H), change allow/deny in Ranger
+Admin policies instead of Polaris CLI revoke/grant.
 
 CLI cross-check (optional):
 
 ```shell
-polaris ... namespaces list --catalog "${CATALOG_NAME}"
-polaris ... tables list --catalog "${CATALOG_NAME}" --namespace smoke_ns.schema1
+polaris --host "${POLARIS_HOST}" --port 8181 \
+  --client-id "${CLIENT_ID}" --client-secret "${CLIENT_SECRET}" \
+  namespaces list --catalog "${CATALOG_NAME}"
+
+polaris --host "${POLARIS_HOST}" --port 8181 \
+  --client-id "${CLIENT_ID}" --client-secret "${CLIENT_SECRET}" \
+  tables list --catalog "${CATALOG_NAME}" --namespace smoke_ns.schema1
 ```
 
 ---
