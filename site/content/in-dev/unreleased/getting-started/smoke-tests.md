@@ -204,8 +204,8 @@ export RANGER_URL=http://localhost:6080
 export RANGER_SERVICE_NAME=dev_polaris
 
 # Spark homes
-export SPARK3_HOME=${SPARK3_HOME:-/opt/spark3}
-export SPARK4_HOME=${SPARK4_HOME:-/opt/spark4}
+export SPARK3_HOME=${SPARK3_HOME:-/usr/odp/current/spark3-client}
+export SPARK4_HOME=${SPARK4_HOME:-/usr/odp/current/spark4-client}
 
 # Iceberg runtime versions (match your Spark / Iceberg install)
 export ICEBERG_VERSION=${ICEBERG_VERSION:-1.10.0}
