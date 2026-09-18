@@ -24,10 +24,11 @@ weight: 110
 ---
 
 Manual smoke-test checklist for a **standalone Polaris server** co-located with supporting services
-(Postgres, Hive Metastore, HDFS, Ozone, Ranger, Spark 3 / Spark 4).
+(Postgres, Hive Metastore, HDFS, Ozone, MinIO/S3, Ranger, Spark 3 / Spark 4).
 
-Covers environment setup, auth/metastore/storage matrix, **Iceberg** engine flows, and
-**non-Iceberg** flows (generic tables via REST, Delta, Hudi via the Polaris Spark client).
+Covers environment setup, auth/metastore/storage matrix (**FILE**, **AWS S3**, **MinIO**, **Ozone**),
+**Iceberg** engine flows, and **non-Iceberg** flows (generic tables via REST, Delta, Hudi via the
+Polaris Spark client).
 
 Each step lists **purpose**, **commands**, and **expected results**. Mark a combo green only when
 every step in that combo’s section passes.
@@ -36,7 +37,7 @@ every step in that combo’s section passes.
 > and `AZURE` only. There is **no** first-class `hdfs://` INTERNAL catalog type. Use:
 >
 > - `FILE` for local filesystem warehouses
-> - `S3` (with custom endpoint) for Apache Ozone
+> - `S3` for AWS S3, MinIO, Apache Ozone, and other S3-compatible stores
 > - **Hive Metastore federation** or **Hadoop catalog federation** when the warehouse lives on HDFS
 >   and ambient Hadoop config + process identity can reach it
 
@@ -54,6 +55,8 @@ Confirm the co-located stack is up before starting Polaris:
 | Hive Metastore | `nc -zv <hms-host> 9083` (or your Thrift port) | Needed for Hive federation |
 | HDFS | `hdfs dfs -ls /` | Needed when warehouse is on HDFS |
 | Ozone S3 gateway | `curl -sS http://127.0.0.1:9878` (adjust port) | Needed for Ozone catalogs |
+| MinIO / S3 gateway | `curl -sS http://127.0.0.1:9000/minio/health/live` (adjust) | Needed for MinIO catalogs |
+| AWS S3 | `aws s3 ls s3://${S3_BUCKET}/` (or console) | Needed for AWS S3 catalogs |
 | Ranger Admin | `curl -sS http://<ranger-host>:6080` | Needed for Ranger authZ combos |
 | Spark 3 / Spark 4 | `$SPARK3_HOME/bin/spark-sql --version`, `$SPARK4_HOME/bin/spark-sql --version` | Iceberg SQL smoke |
 
@@ -98,12 +101,25 @@ export HDFS_WAREHOUSE=hdfs://localhost:8020/warehouse/polaris
 export HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/etc/hadoop/conf}
 export HIVE_CONF_DIR=${HIVE_CONF_DIR:-/etc/hive/conf}
 
-# Ozone (S3-compatible)
+# AWS S3 (native)
+export S3_BUCKET=s3://polaris-smoke-bucket
+export AWS_ROLE_ARN=arn:aws:iam::123456789012:role/polaris-warehouse-access
+export AWS_EXTERNAL_ID=${AWS_EXTERNAL_ID:-}   # optional trust external ID
+export AWS_REGION=${AWS_REGION:-us-west-2}
+# Polaris process needs credentials that can AssumeRole into AWS_ROLE_ARN
+# (instance profile, env keys, or polaris.storage.aws.access-key / secret-key)
+
+# MinIO (S3-compatible)
+export MINIO_ENDPOINT=http://127.0.0.1:9000
+export MINIO_BUCKET=s3://polaris-smoke
+export MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+export MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+
+# Ozone (S3-compatible; often no STS)
 export OZONE_S3_ENDPOINT=http://127.0.0.1:9878
 export OZONE_BUCKET=s3://polaris-smoke
 export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-ozone}
 export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-ozone}
-export AWS_REGION=${AWS_REGION:-us-west-2}
 
 # Ranger
 export RANGER_URL=http://localhost:6080
@@ -157,14 +173,16 @@ failures do not cascade.
 |---|---|---|---|---|---|
 | **A** | internal | internal | in-memory | FILE (local FS) | `./gradlew run` defaults |
 | **B** | internal | internal | Postgres (relational-jdbc) | FILE (local FS) | Bootstrap required |
-| **C** | internal | internal | Postgres | Ozone via S3 endpoint | Bootstrap + Ozone keys |
+| **C1** | internal | internal | Postgres | **AWS S3** (role ARN + vended credentials) | IAM role + STS |
+| **C2** | internal | internal | Postgres | **MinIO** (S3-compatible endpoint) | Path-style + keys |
+| **C3** | internal | internal | Postgres | **Ozone** (S3 endpoint, often `--no-sts`) | Bootstrap + Ozone keys |
 | **D** | internal | internal | Postgres | Hive federation → HMS + HDFS warehouse | `-PNonRESTCatalogs=HIVE` |
 | **E** | internal | internal | Postgres | Hadoop catalog federation | Federation flags |
 | **F** | internal | internal | Postgres | Iceberg REST federation | Second REST catalog / same Polaris |
-| **G** | internal | **Ranger** | Postgres | FILE or Ozone | Ranger ≥ 2.8.0 |
+| **G** | internal | **Ranger** | Postgres | FILE or S3 (AWS/MinIO/Ozone) | Ranger ≥ 2.8.0 |
 | **H** | internal | Ranger | Postgres | Hive federation + HDFS | Combines D + G |
 
-Suggested order: **A → B → C → D → E → F → G → H**.
+Suggested order: **A → B → C1 → C2 → C3 → D → E → F → G → H**.
 
 ### Core ordered checklist (minimal standalone)
 
@@ -186,8 +204,8 @@ Each step: purpose → command → expected result.
 | 11 | Cleanup (tables, namespaces, catalog, principal) | §3.7 |
 | 12 | Pass criteria summary | §14 |
 
-Extended combos (Postgres, Ozone, Hive/Hadoop/REST federation, Ranger) and non-Iceberg
-(Delta/Hudi/generic tables) build on the same helpers after the core path is green.
+Extended combos (Postgres, AWS S3 / MinIO / Ozone, Hive/Hadoop/REST federation, Ranger) and
+non-Iceberg (Delta/Hudi/generic tables) build on the same helpers after the core path is green.
 
 ---
 
@@ -510,22 +528,150 @@ succeeds; Spark `SELECT` still sees prior data.
 
 ---
 
-## 6. Combo C — Postgres + Ozone (S3-compatible)
+## 6. Combos C1–C3 — S3 storage (AWS, MinIO, Ozone)
 
-### 6.1 Setup
+All three use `--storage-type s3`. Differences are endpoint, STS / credential vending, and how
+Spark reaches object storage. Prefer Postgres metastore (combo B bootstrap) so catalogs survive
+restarts while you iterate on storage.
 
-- Combo B Postgres bootstrap already done (or repeat 5.1–5.2).
-- Ozone S3 gateway reachable at `${OZONE_S3_ENDPOINT}`.
-- Bucket exists (create via Ozone/S3 tooling if needed).
-- Export `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` for the **Polaris server process** and for
-  Spark when not using vended credentials.
+Shared Polaris start notes:
 
-### 6.2 Start Polaris
+- Ensure `S3` is in `SUPPORTED_CATALOG_STORAGE_TYPES` (default includes S3).
+- Pass storage credentials into the **Polaris server process** as required by each backend.
+- After catalog create: §3.4–3.5, then §12 (Iceberg) and §13 (non-Iceberg / Delta on `s3://`).
 
-Same as combo B, plus ensure S3 is in `SUPPORTED_CATALOG_STORAGE_TYPES` (default includes S3).
-Pass AWS env vars into the Polaris process.
+### 6.1 Combo C1 — AWS S3 (IAM role + vended credentials)
 
-### 6.3 Create Ozone catalog
+#### Setup
+
+- Bucket `${S3_BUCKET}` exists; Polaris service identity can `sts:AssumeRole` on `${AWS_ROLE_ARN}`.
+- Role trust policy allows Polaris; role permissions cover `s3:GetObject` / `PutObject` / `ListBucket`
+  (and delete if using purge) under the warehouse prefix.
+- Optional: set `AWS_EXTERNAL_ID` if the trust policy requires it.
+- Server-side AWS credentials: instance profile, env `AWS_ACCESS_KEY_ID` /
+  `AWS_SECRET_ACCESS_KEY`, or `polaris.storage.aws.access-key` / `polaris.storage.aws.secret-key`.
+
+#### Create catalog
+
+```shell
+export CATALOG_NAME=smoke_aws_s3_pg
+
+polaris --host "${POLARIS_HOST}" --port 8181 \
+  --client-id "${CLIENT_ID}" --client-secret "${CLIENT_SECRET}" \
+  catalogs create \
+  --storage-type s3 \
+  --default-base-location "${S3_BUCKET}/smoke/aws" \
+  --role-arn "${AWS_ROLE_ARN}" \
+  --region "${AWS_REGION}" \
+  ${AWS_EXTERNAL_ID:+--external-id "${AWS_EXTERNAL_ID}"} \
+  "${CATALOG_NAME}"
+
+polaris --host "${POLARIS_HOST}" --port 8181 \
+  --client-id "${CLIENT_ID}" --client-secret "${CLIENT_SECRET}" \
+  catalogs get "${CATALOG_NAME}"
+```
+
+**Expected:** Catalog created; `storageType` S3; `roleArn` / region present.
+
+#### Iceberg / Spark (vended credentials)
+
+Use §12.1 / §12.3 **with** `X-Iceberg-Access-Delegation=vended-credentials` and
+`iceberg-aws-bundle` on the Spark classpath. Engines should **not** need static bucket keys when
+vending works.
+
+```shell
+# Spark packages example (add to §12 session):
+# --packages ...,org.apache.iceberg:iceberg-aws-bundle:${ICEBERG_VERSION}
+```
+
+#### S3-specific Iceberg checks
+
+| # | Use case | Action | Expected |
+|---|---|---|---|
+| 1 | Warehouse prefix | After `CREATE TABLE`, list `${S3_BUCKET}/smoke/aws/...` via `aws s3 ls` | Metadata/data objects under catalog prefix |
+| 2 | Insert / select | §12.4 insert/select | Rows round-trip; new data files in S3 |
+| 3 | Drop with purge | `DROP TABLE ... PURGE` (requires `DROP_WITH_PURGE_ENABLED`) | Table gone; objects removed or marked for purge per config |
+| 4 | Cross-engine | Optional second Spark/Trino session same warehouse | Sees committed data |
+| 5 | Cred vending failure | Break role trust / deny `AssumeRole`, retry insert | Clear auth/storage error (not silent success) |
+
+#### Delta on AWS S3 (non-Iceberg)
+
+Use Polaris Spark client (§13.3) with Delta locations under `${S3_BUCKET}/smoke/aws/delta/...` and
+vended credentials when supported; otherwise configure Spark S3A with credentials that can access
+the bucket.
+
+---
+
+### 6.2 Combo C2 — MinIO (S3-compatible)
+
+#### Setup
+
+- MinIO listening at `${MINIO_ENDPOINT}`; bucket in `${MINIO_BUCKET}` exists.
+- Export MinIO keys for the Polaris process:
+
+```shell
+export AWS_ACCESS_KEY_ID="${MINIO_ACCESS_KEY}"
+export AWS_SECRET_ACCESS_KEY="${MINIO_SECRET_KEY}"
+export AWS_REGION="${AWS_REGION}"
+```
+
+#### Create catalog
+
+```shell
+export CATALOG_NAME=smoke_minio_pg
+
+polaris --host "${POLARIS_HOST}" --port 8181 \
+  --client-id "${CLIENT_ID}" --client-secret "${CLIENT_SECRET}" \
+  catalogs create \
+  --storage-type s3 \
+  --endpoint "${MINIO_ENDPOINT}" \
+  --path-style-access \
+  --default-base-location "${MINIO_BUCKET}/smoke" \
+  --region "${AWS_REGION}" \
+  "${CATALOG_NAME}"
+```
+
+If Polaris and clients need different URLs (Docker vs host), add `--endpoint-internal` for the
+server-side endpoint. If your MinIO setup supports STS against the same endpoint, you may set
+`--sts-endpoint "${MINIO_ENDPOINT}"` and try vended credentials; otherwise use static keys (§12.2).
+
+**Expected:** Catalog create succeeds; `catalogs get` shows custom endpoint + path-style access.
+
+#### Iceberg / Spark
+
+1. Prefer vended credentials if STS is available on MinIO.
+2. Otherwise use §12.2-style static config:
+
+```shell
+# --packages ... iceberg-aws-bundle ...
+# --conf spark.hadoop.fs.s3a.endpoint=${MINIO_ENDPOINT}
+# --conf spark.hadoop.fs.s3a.path.style.access=true
+# --conf spark.hadoop.fs.s3a.access.key=${MINIO_ACCESS_KEY}
+# --conf spark.hadoop.fs.s3a.secret.key=${MINIO_SECRET_KEY}
+# Do NOT set X-Iceberg-Access-Delegation=vended-credentials when STS is unavailable
+```
+
+#### MinIO-specific checks
+
+| # | Use case | Action | Expected |
+|---|---|---|---|
+| 1 | Wrong endpoint | Create catalog without `--endpoint` (points at real AWS) | Fail or unusable; fixing endpoint restores access |
+| 2 | Path-style | Create table + insert | Objects visible in MinIO console under bucket prefix |
+| 3 | Iceberg CRUD | §12.4 on `${CATALOG_NAME}` | Pass |
+| 4 | Delta on MinIO | §13 with `LOCATION 's3://.../delta_t'` | Create/insert/select/drop |
+| 5 | Regtest cousin | Optional: `S3_TEST_BACKEND=minio` + `regtests/t_spark_sql` S3 script | Matches automated path |
+
+---
+
+### 6.3 Combo C3 — Ozone (S3-compatible, typically no STS)
+
+#### Setup
+
+- Ozone S3 gateway at `${OZONE_S3_ENDPOINT}`; bucket exists.
+- Export `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` for Polaris and Spark (any values if Ozone S3
+  auth is disabled in your cluster).
+
+#### Create catalog
 
 ```shell
 export CATALOG_NAME=smoke_ozone_pg
@@ -547,10 +693,25 @@ polaris --host "${POLARIS_HOST}" --port 8181 \
 > With `--no-sts`, engines must **not** send `X-Iceberg-Access-Delegation=vended-credentials`.
 > Configure Spark with static Ozone credentials instead (section 12.2).
 
-### 6.4 AuthZ + Iceberg / non-Iceberg
+#### AuthZ + Iceberg / non-Iceberg
 
 Section 3.4–3.5, then sections 12–13 with Ozone packages (`iceberg-aws-bundle` or equivalent) and
-**without** vended-credentials header.
+**without** vended-credentials header. Repeat key §12.4 and §13 Delta checks against Ozone paths.
+
+---
+
+### 6.4 S3 use-case matrix (quick compare)
+
+| Use case | AWS S3 (C1) | MinIO (C2) | Ozone (C3) |
+|---|---|---|---|
+| Catalog `--storage-type s3` | Yes | Yes | Yes |
+| `--role-arn` / STS assume | Yes (typical) | Optional / mock ARN | Usually `--no-sts` |
+| `--endpoint` + path-style | No (AWS public) | Yes | Yes |
+| Vended credentials header | Yes | If STS configured | No |
+| Iceberg create/insert/select | §12 | §12 | §12 |
+| Drop purge | Yes | Yes | Yes |
+| Delta generic table on `s3://` | §13 | §13 | §13 |
+| Verify objects in store | `aws s3 ls` | MinIO console / `mc ls` | Ozone / S3 API |
 
 ---
 
@@ -759,11 +920,11 @@ authorizer** when `polaris.authorization.type=ranger` — policies in Ranger Adm
 Run these against each combo’s `${CATALOG_NAME}` after principal/role setup. Repeat with Spark 3
 and Spark 4.
 
-### 12.1 Spark 3 session (FILE / vended credentials where supported)
+### 12.1 Spark 3 session (FILE / AWS S3 with vended credentials)
 
 ```shell
 ${SPARK3_HOME}/bin/spark-sql \
-  --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:${ICEBERG_VERSION} \
+  --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:${ICEBERG_VERSION},org.apache.iceberg:iceberg-aws-bundle:${ICEBERG_VERSION} \
   --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
   --conf spark.sql.catalog.polaris=org.apache.iceberg.spark.SparkCatalog \
   --conf spark.sql.catalog.polaris.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
@@ -772,21 +933,34 @@ ${SPARK3_HOME}/bin/spark-sql \
   --conf spark.sql.catalog.polaris.credential=${USER_CLIENT_ID}:${USER_CLIENT_SECRET} \
   --conf spark.sql.catalog.polaris.scope='PRINCIPAL_ROLE:ALL' \
   --conf spark.sql.catalog.polaris.token-refresh-enabled=true \
+  --conf spark.sql.catalog.polaris.client.region=${AWS_REGION} \
   --conf spark.sql.catalog.polaris.header.X-Iceberg-Access-Delegation=vended-credentials
 ```
 
-Omit the `X-Iceberg-Access-Delegation` line for Ozone `--no-sts` catalogs; add
-`iceberg-aws-bundle` and static AWS/Ozone conf instead (12.2).
+- **FILE catalogs:** `iceberg-aws-bundle` and `client.region` may be omitted.
+- **AWS S3 (C1):** keep vended-credentials + aws-bundle as above.
+- **MinIO / Ozone without STS:** omit the `X-Iceberg-Access-Delegation` line; use §12.2 static
+  endpoint config instead.
 
-### 12.2 Spark session for Ozone (no STS / no vended credentials)
+### 12.2 Spark session for MinIO / Ozone (static credentials, no vended delegation)
 
 ```shell
-# Add iceberg-aws-bundle to --packages and configure endpoint access, e.g.:
-# --conf spark.hadoop.fs.s3a.endpoint=${OZONE_S3_ENDPOINT}
-# --conf spark.hadoop.fs.s3a.path.style.access=true
-# --conf spark.hadoop.fs.s3a.access.key=...
-# --conf spark.hadoop.fs.s3a.secret.key=...
-# Do NOT set X-Iceberg-Access-Delegation=vended-credentials
+${SPARK3_HOME}/bin/spark-sql \
+  --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:${ICEBERG_VERSION},org.apache.iceberg:iceberg-aws-bundle:${ICEBERG_VERSION} \
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+  --conf spark.sql.catalog.polaris=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.polaris.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
+  --conf spark.sql.catalog.polaris.uri=${POLARIS_API}/api/catalog \
+  --conf spark.sql.catalog.polaris.warehouse=${CATALOG_NAME} \
+  --conf spark.sql.catalog.polaris.credential=${USER_CLIENT_ID}:${USER_CLIENT_SECRET} \
+  --conf spark.sql.catalog.polaris.scope='PRINCIPAL_ROLE:ALL' \
+  --conf spark.sql.catalog.polaris.token-refresh-enabled=true \
+  --conf spark.sql.catalog.polaris.client.region=${AWS_REGION} \
+  --conf spark.hadoop.fs.s3a.endpoint=${MINIO_ENDPOINT:-$OZONE_S3_ENDPOINT} \
+  --conf spark.hadoop.fs.s3a.path.style.access=true \
+  --conf spark.hadoop.fs.s3a.access.key=${MINIO_ACCESS_KEY:-$AWS_ACCESS_KEY_ID} \
+  --conf spark.hadoop.fs.s3a.secret.key=${MINIO_SECRET_KEY:-$AWS_SECRET_ACCESS_KEY}
+# Do NOT set X-Iceberg-Access-Delegation=vended-credentials when using --no-sts catalogs
 ```
 
 ### 12.3 Spark 4 session
@@ -1056,12 +1230,20 @@ Delta / Hudi / Spark client versions: ____________________
 
 [ ] A  in-memory + FILE + internal/internal
 [ ] B  Postgres + FILE + internal/internal (+ restart durability)
-[ ] C  Postgres + Ozone S3
+[ ] C1 AWS S3 (role ARN + vended credentials) + Iceberg/Delta
+[ ] C2 MinIO S3-compatible + Iceberg/Delta
+[ ] C3 Ozone S3-compatible (--no-sts) + Iceberg/Delta
 [ ] D  Hive federation + HDFS warehouse
 [ ] E  Hadoop federation
 [ ] F  Iceberg REST federation
 [ ] G  Ranger authZ (allow + deny)
 [ ] H  Ranger + Hive federation
+
+S3 storage checks:
+[ ] Objects appear under warehouse prefix after insert
+[ ] Vended credentials work (AWS) / static keys work (MinIO/Ozone)
+[ ] DROP TABLE PURGE (or equivalent cleanup) behaves as configured
+[ ] Delta LOCATION on s3:// for at least one of C1/C2/C3
 
 Iceberg (per catalog under test):
 [ ] Spark 3: create / insert / select / evolve / view / time travel / cleanup
@@ -1090,12 +1272,14 @@ Health:
 - [Admin tool / bootstrap]({{% relref "../../admin-tool" %}})
 - [Using Polaris]({{% relref "using-polaris" %}})
 - [Ozone catalog]({{% relref "creating-a-catalog/s3/catalog-ozone" %}})
+- [AWS S3 catalog]({{% relref "creating-a-catalog/s3/catalog-aws" %}})
+- [MinIO catalog]({{% relref "creating-a-catalog/s3/catalog-minio" %}})
 - [Hive Metastore federation]({{% relref "../../federation/hive-metastore-federation" %}})
 - [Iceberg REST federation]({{% relref "../../federation/iceberg-rest-federation" %}})
 - [Generic tables]({{% relref "../../generic-table" %}})
 - [Polaris Spark client]({{% relref "../../polaris-spark-client" %}})
 - [Command-line interface]({{% relref "../../command-line-interface" %}})
 - Ranger extension README: `extensions/auth/ranger/impl/README.md`
-- Automated cousins: `regtests/t_spark_sql`, `regtests/t_catalog_federation`, `regtests/t_cli`,
+- Automated cousins: `regtests/t_spark_sql` (including `spark_sql_s3.sh`), `regtests/t_catalog_federation`, `regtests/t_cli`,
   `plugins/spark/v3.5/regtests/suites/spark_sql_delta.sh`,
   `plugins/spark/v3.5/regtests/suites/spark_sql_hudi.sh`
