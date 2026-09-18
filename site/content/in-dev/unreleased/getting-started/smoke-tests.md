@@ -141,7 +141,7 @@ Confirm the co-located stack is up before starting Polaris:
 command -v jq
 
 # Polaris CLI
-pip install -U apache-polaris
+python -m pip install apache-polaris==1.6.0
 polaris --help
 ```
 
