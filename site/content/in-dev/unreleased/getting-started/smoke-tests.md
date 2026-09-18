@@ -563,7 +563,7 @@ polaris --host "${POLARIS_HOST}" --port 8181 \
   --default-base-location "${S3_BUCKET}/smoke/aws" \
   --role-arn "${AWS_ROLE_ARN}" \
   --region "${AWS_REGION}" \
-  ${AWS_EXTERNAL_ID:+--external-id "${AWS_EXTERNAL_ID}"} \
+  --external-id "${AWS_EXTERNAL_ID}" \
   "${CATALOG_NAME}"
 
 polaris --host "${POLARIS_HOST}" --port 8181 \
@@ -571,6 +571,7 @@ polaris --host "${POLARIS_HOST}" --port 8181 \
   catalogs get "${CATALOG_NAME}"
 ```
 
+Omit `--external-id` when your IAM trust policy does not require one.
 **Expected:** Catalog created; `storageType` S3; `roleArn` / region present.
 
 #### Iceberg / Spark (vended credentials)
