@@ -573,6 +573,7 @@ polaris --host "${POLARIS_HOST}" --port 8181 \
 Run sections **3.4–3.6** (principal/roles/privileges, catalog config, **CLI namespaces**), then
 section **12 (Iceberg)** and section **13 (non-Iceberg)** against Spark 3 and Spark 4 with
 `warehouse=${CATALOG_NAME}` and FILE-friendly packages (no AWS bundle required for pure `file://`).
+Start Spark with `--master 'local[*]'` (§12.1) so inserts can write to the local filesystem.
 
 §3.6 creates `smoke_ns` / `smoke_ns.schema1` via the Polaris CLI. §12.4 uses the same names with
 `CREATE NAMESPACE IF NOT EXISTS`, so Spark is idempotent if the CLI step already ran — but do **not**
@@ -1340,6 +1341,7 @@ BASE_LOC=file:///tmp/polaris-smoke/${CATALOG_NAME}/delta
 mkdir -p /tmp/polaris-smoke/${CATALOG_NAME}/delta
 
 ${SPARK3_HOME}/bin/spark-sql \
+  --master 'local[*]' \
   --packages ${POLARIS_SPARK3_PKG},${DELTA_SPARK3_PKG} \
   --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,io.delta.sql.DeltaSparkSessionExtension \
   --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog \
