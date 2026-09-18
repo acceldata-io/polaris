@@ -894,7 +894,7 @@ AuthN stays `polaris.authentication.type=internal`.
 | Step | Action | Expected |
 |---|---|---|
 | Health / token | Section 3.1–3.2 | Pass |
-| Allowed op | Create FILE/Ozone catalog + Spark SELECT as policy-allowed principal | Success |
+| Allowed op | Create FILE/S3 catalog + Spark SELECT as policy-allowed principal | Success |
 | Denied op | Principal **without** Ranger policy tries `CREATE TABLE` / `INSERT` | `ForbiddenException` / HTTP 403 |
 | Audit | Open Ranger audit UI | Access events recorded (if audit enabled) |
 
