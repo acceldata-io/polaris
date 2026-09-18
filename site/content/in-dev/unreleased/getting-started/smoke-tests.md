@@ -1056,8 +1056,13 @@ and Spark 4.
 
 ### 12.1 Spark 3 session (FILE / AWS S3 with vended credentials)
 
+> **Local FS / FILE catalogs:** start Spark in **local mode** (`--master 'local[*]'`). Inserts into
+> `file://` warehouses fail or misbehave if executors run on other nodes (YARN/K8s) that do not share
+> the same local path. Use local mode for combos **A** and **B**.
+
 ```shell
 ${SPARK3_HOME}/bin/spark-sql \
+  --master 'local[*]' \
   --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:${ICEBERG_VERSION},org.apache.iceberg:iceberg-aws-bundle:${ICEBERG_VERSION} \
   --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
   --conf spark.sql.catalog.polaris=org.apache.iceberg.spark.SparkCatalog \
@@ -1071,8 +1076,9 @@ ${SPARK3_HOME}/bin/spark-sql \
   --conf spark.sql.catalog.polaris.header.X-Iceberg-Access-Delegation=vended-credentials
 ```
 
-- **FILE catalogs:** `iceberg-aws-bundle` and `client.region` may be omitted.
-- **AWS S3 (C1):** keep vended-credentials + aws-bundle as above.
+- **FILE catalogs:** keep `--master 'local[*]'`; `iceberg-aws-bundle` and `client.region` may be omitted.
+- **AWS S3 (C1):** keep vended-credentials + aws-bundle as above; cluster/YARN master is fine if
+  executors can reach S3.
 - **MinIO / Ozone without STS:** omit the `X-Iceberg-Access-Delegation` line; use §12.2 static
   endpoint config instead.
 
@@ -1104,6 +1110,7 @@ Use the Iceberg Spark runtime artifact that matches your Spark 4 / Scala line (c
 
 ```shell
 ${SPARK4_HOME}/bin/spark-sql \
+  --master 'local[*]' \
   --packages org.apache.iceberg:iceberg-spark-runtime-4.0_2.13:${ICEBERG_VERSION} \
   --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
   --conf spark.sql.catalog.polaris=org.apache.iceberg.spark.SparkCatalog \
@@ -1115,8 +1122,8 @@ ${SPARK4_HOME}/bin/spark-sql \
   --conf spark.sql.catalog.polaris.token-refresh-enabled=true
 ```
 
-Adjust the `iceberg-spark-runtime-*` coordinate to the exact artifact published for your Iceberg
-version if the coordinate above differs.
+Use `--master 'local[*]'` for **FILE** / local FS warehouses (required for inserts). For S3-backed
+catalogs you may use your cluster master instead if executors can reach object storage.
 
 ### 12.4 SQL checklist
 
