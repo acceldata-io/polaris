@@ -311,7 +311,7 @@ Each step: purpose → command → expected result.
 
 | Step | Purpose | Where |
 |---|---|---|
-| 1 | Prerequisites (ports, credentials, CLI) | §1 |
+| 1 | Prerequisites (Java 21, ports, credentials, CLI) | §1 |
 | 2 | Health (`/q/health`, ready, metrics) | §3.1 |
 | 3 | Auth (OAuth token + bad-secret negative) | §3.2 |
 | 4 | Management API (principal-roles, catalogs) | §3.3 |
@@ -512,9 +512,15 @@ also wipes all state.
 
 ### 4.1 Setup / start
 
-In-memory persistence needs no Postgres bootstrap. Enable FILE storage:
+In-memory persistence needs no Postgres bootstrap. Enable FILE storage. Use the Java 21 shell from
+§1.1 / §1.6 (`JAVA_HOME` pointing at JDK 21):
 
 ```shell
+# Preferred on shared hosts: binary distro with explicit JAVA_HOME
+# export JAVA_HOME=...   # §1.1
+# export POLARIS_JAVA_OPTS='...'  # see §1.6
+# bin/server
+
 ./gradlew run
 # Gradle run already sets:
 #   polaris.bootstrap.credentials=POLARIS,root,s3cr3t
@@ -522,9 +528,10 @@ In-memory persistence needs no Postgres bootstrap. Enable FILE storage:
 #   SUPPORTED_CATALOG_STORAGE_TYPES including FILE
 ```
 
-Or standalone JVM:
+Or standalone JVM via `bin/server` (see §1.6 for the full Java 21 + `POLARIS_JAVA_OPTS` example):
 
 ```shell
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # adjust per §1.1
 export POLARIS_JAVA_OPTS='
   -Dpolaris.persistence.type=in-memory
   -Dpolaris.authentication.type=internal
@@ -535,7 +542,7 @@ export POLARIS_JAVA_OPTS='
   -Dpolaris.features."DROP_WITH_PURGE_ENABLED"=true
   -Dpolaris.readiness.ignore-severe-issues=true
 '
-# then start bin/server or the Quarkus runner with those -D flags
+# then: bin/server
 ```
 
 **Expected:** Ports 8181 / 8182 listening; section 3.1–3.3 pass.
