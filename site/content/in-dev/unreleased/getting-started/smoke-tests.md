@@ -572,6 +572,7 @@ polaris --host "${POLARIS_HOST}" --port 8181 \
 ```
 
 Omit `--external-id` when your IAM trust policy does not require one.
+
 **Expected:** Catalog created; `storageType` S3; `roleArn` / region present.
 
 #### Iceberg / Spark (vended credentials)
