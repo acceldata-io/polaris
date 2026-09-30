@@ -25,11 +25,11 @@ plugins {
 dependencies {
   implementation(project(":polaris-core"))
 
-  implementation(libs.ranger.authz.embedded) {
-    exclude("org.apache.ranger", "ranger-audit-dest-hdfs")
+  implementation(libs.ranger.plugins.common) {
     exclude("org.slf4j", "slf4j-reload4j")
-    exclude("ch.qos.reload4j", "reload4j")
-    exclude("io.dropwizard.metrics", "metrics-core")
+  }
+  implementation(libs.ranger.plugins.cred) {
+    exclude("org.slf4j", "slf4j-reload4j")
   }
 
   implementation(libs.commons.lang3)

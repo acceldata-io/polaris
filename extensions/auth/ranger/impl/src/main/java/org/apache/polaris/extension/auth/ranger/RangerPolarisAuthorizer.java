@@ -35,14 +35,9 @@ import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.persistence.PolarisResolvedPathWrapper;
 import org.apache.polaris.extension.auth.ranger.utils.RangerUtils;
-import org.apache.ranger.authz.api.RangerAuthzException;
-import org.apache.ranger.authz.embedded.RangerEmbeddedAuthorizer;
-import org.apache.ranger.authz.model.RangerAccessContext;
-import org.apache.ranger.authz.model.RangerAccessInfo;
-import org.apache.ranger.authz.model.RangerAuthzResult;
-import org.apache.ranger.authz.model.RangerMultiAuthzRequest;
-import org.apache.ranger.authz.model.RangerMultiAuthzResult;
-import org.apache.ranger.authz.model.RangerUserInfo;
+import org.apache.ranger.plugin.policyengine.RangerAccessRequestImpl;
+import org.apache.ranger.plugin.policyengine.RangerAccessResult;
+import org.apache.ranger.plugin.service.RangerBasePlugin;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -52,20 +47,18 @@ import org.slf4j.LoggerFactory;
 public class RangerPolarisAuthorizer implements PolarisAuthorizer {
   private static final Logger LOG = LoggerFactory.getLogger(RangerPolarisAuthorizer.class);
 
-  public static final String SERVICE_TYPE = "polaris";
-
   private static final String RANGER_AUTH_FAILED_ERROR =
       "Principal '%s' is not authorized for op '%s'";
 
-  private final RangerEmbeddedAuthorizer authorizer;
+  private final RangerBasePlugin plugin;
   private final String serviceName;
   private RealmContext realmContext;
   private String realmConextIdentifier;
   private final RealmConfig realmConfig;
 
   public RangerPolarisAuthorizer(
-      RangerEmbeddedAuthorizer authorizer, String serviceName, RealmConfig realmConfig) {
-    this.authorizer = authorizer;
+      RangerBasePlugin plugin, String serviceName, RealmConfig realmConfig) {
+    this.plugin = plugin;
     this.serviceName = serviceName;
     this.realmConfig = realmConfig;
   }
@@ -130,17 +123,12 @@ public class RangerPolarisAuthorizer implements PolarisAuthorizer {
           secondaries);
     }
 
-    try {
-      AuthorizationPreConditions.checkCredentialRotationRequired(
-          polarisPrincipal, authzOp, realmConfig);
+    AuthorizationPreConditions.checkCredentialRotationRequired(
+        polarisPrincipal, authzOp, realmConfig);
 
-      if (!isAccessAuthorized(polarisPrincipal, authzOp, targets, secondaries)) {
-        throw new ForbiddenException(
-            RANGER_AUTH_FAILED_ERROR, polarisPrincipal.getName(), authzOp.name());
-      }
-    } catch (RangerAuthzException excp) {
-      throw new IllegalStateException(
-          "Failed to authorize principal " + polarisPrincipal + " for op {}" + authzOp, excp);
+    if (!isAccessAuthorized(polarisPrincipal, authzOp, targets, secondaries)) {
+      throw new ForbiddenException(
+          RANGER_AUTH_FAILED_ERROR, polarisPrincipal.getName(), authzOp.name());
     }
   }
 
@@ -148,11 +136,10 @@ public class RangerPolarisAuthorizer implements PolarisAuthorizer {
       @NonNull PolarisPrincipal principal,
       @NonNull PolarisAuthorizableOperation authzOp,
       @Nullable List<PolarisResolvedPathWrapper> targets,
-      @Nullable List<PolarisResolvedPathWrapper> secondaries)
-      throws RangerAuthzException {
+      @Nullable List<PolarisResolvedPathWrapper> secondaries) {
     boolean isTargetSpecified = targets != null && !targets.isEmpty();
     boolean isSecondarySpecified = secondaries != null && !secondaries.isEmpty();
-    List<RangerAccessInfo> accessInfos = new ArrayList<>();
+    List<RangerAccessRequestImpl> requests = new ArrayList<>();
 
     RangerPolarisOperationSemantics semantics =
         RangerPolarisOperationSemantics.forOperation(authzOp);
@@ -165,9 +152,9 @@ public class RangerPolarisAuthorizer implements PolarisAuthorizer {
           semantics.targetPrivileges());
 
       for (PolarisResolvedPathWrapper target : targets) {
-        accessInfos.add(
-            RangerUtils.toAccessInfo(
-                target, authzOp, semantics.targetPrivileges(), realmConextIdentifier));
+        requests.addAll(
+            RangerUtils.toAccessRequests(
+                principal, target, authzOp, semantics.targetPrivileges(), realmConextIdentifier));
       }
     } else if (isTargetSpecified) {
       LOG.warn(
@@ -185,9 +172,13 @@ public class RangerPolarisAuthorizer implements PolarisAuthorizer {
           semantics.secondaryPrivileges());
 
       for (PolarisResolvedPathWrapper secondary : secondaries) {
-        accessInfos.add(
-            RangerUtils.toAccessInfo(
-                secondary, authzOp, semantics.secondaryPrivileges(), realmConextIdentifier));
+        requests.addAll(
+            RangerUtils.toAccessRequests(
+                principal,
+                secondary,
+                authzOp,
+                semantics.secondaryPrivileges(),
+                realmConextIdentifier));
       }
     } else if (isSecondarySpecified) {
       LOG.warn(
@@ -197,33 +188,42 @@ public class RangerPolarisAuthorizer implements PolarisAuthorizer {
           principal.getName());
     }
 
-    RangerUserInfo userInfo = RangerUtils.toUserInfo(principal);
-    RangerAccessContext context = new RangerAccessContext(SERVICE_TYPE, serviceName);
-    RangerMultiAuthzRequest authzRequest =
-        new RangerMultiAuthzRequest(userInfo, accessInfos, context);
-    RangerMultiAuthzResult authzResult = authorizer.authorize(authzRequest);
-    boolean isAllowed = RangerAuthzResult.AccessDecision.ALLOW.equals(authzResult.getDecision());
+    boolean isAllowed = !requests.isEmpty();
+    List<RangerAccessResult> results = new ArrayList<>(requests.size());
+
+    for (RangerAccessRequestImpl request : requests) {
+      RangerAccessResult result = plugin.isAccessAllowed(request);
+
+      results.add(result);
+
+      if (result == null || !result.getIsAllowed()) {
+        isAllowed = false;
+        break;
+      }
+    }
 
     if (LOG.isDebugEnabled()) {
       StringBuilder sb = new StringBuilder();
 
       sb.append("User=")
-          .append(userInfo.getName())
+          .append(principal.getName())
           .append(", operation=")
           .append(authzOp)
           .append(", result=[");
-      for (int i = 0; i < accessInfos.size(); i++) {
+      for (int i = 0; i < results.size(); i++) {
         if (i > 0) {
           sb.append(",");
         }
 
-        RangerAccessInfo accessInfo = accessInfos.get(i);
-        RangerAuthzResult accessResult = authzResult.getAccesses().get(i);
+        RangerAccessRequestImpl request = requests.get(i);
+        RangerAccessResult result = results.get(i);
 
         sb.append("{resource=")
-            .append(accessInfo.getResource())
-            .append(", decision=")
-            .append(accessResult.getDecision())
+            .append(request.getResource().getAsString())
+            .append(", accessType=")
+            .append(request.getAccessType())
+            .append(", allowed=")
+            .append(result != null && result.getIsAllowed())
             .append("}");
       }
       sb.append("]");

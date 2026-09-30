@@ -101,9 +101,6 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "pico
 postgresql = { module = "org.postgresql:postgresql", version = "42.7.11" }
 quarkus-amazon-services-bom = { module = "io.quarkus.platform:quarkus-amazon-services-bom", version.ref="quarkus" }
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
-ranger-audit-core = { module = "org.apache.ranger:ranger-audit-core", version.ref = "ranger" }
-ranger-audit-dest-solr = { module = "org.apache.ranger:ranger-audit-dest-solr", version.ref = "ranger" }
-ranger-authz-embedded = { module = "org.apache.ranger:authz-embedded", version.ref = "ranger" }
 ranger-plugins-common = { module = "org.apache.ranger:ranger-plugins-common", version.ref = "ranger" }
 ranger-plugins-cred = { module = "org.apache.ranger:ranger-plugins-cred", version.ref = "ranger" }
 s3mock-testcontainers = { module = "com.adobe.testing:s3mock-testcontainers", version = "5.0.0" }
