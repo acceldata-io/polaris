@@ -20,24 +20,21 @@
 package org.apache.polaris.extension.auth.ranger.utils;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.polaris.core.auth.PolarisAuthorizableOperation;
 import org.apache.polaris.core.auth.PolarisPrincipal;
-import org.apache.polaris.core.entity.PolarisEntity;
 import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.persistence.PolarisResolvedPathWrapper;
 import org.apache.polaris.core.persistence.ResolvedPolarisEntity;
-import org.apache.ranger.authz.model.RangerAccessInfo;
-import org.apache.ranger.authz.model.RangerResourceInfo;
-import org.apache.ranger.authz.model.RangerUserInfo;
-import org.apache.ranger.authz.util.RangerResourceNameParser;
+import org.apache.ranger.plugin.policyengine.RangerAccessRequestImpl;
+import org.apache.ranger.plugin.policyengine.RangerAccessResourceImpl;
 
 public class RangerUtils {
+  private static final String RESOURCE_TYPE_SEP = ":";
+  private static final String RESOURCE_SEP = ".";
+  private static final String ROOT_RESOURCE = "root";
 
   public static String toResourceType(PolarisEntityType entityType) {
     return switch (entityType) {
@@ -51,18 +48,31 @@ public class RangerUtils {
     };
   }
 
-  public static RangerUserInfo toUserInfo(PolarisPrincipal principal) {
-    return new RangerUserInfo(
-        principal.getName(), getUserAttributes(principal), null, principal.getRoles());
-  }
-
-  public static RangerAccessInfo toAccessInfo(
+  /**
+   * Builds one Ranger access request per privilege. Ranger 2.5 evaluates a single access type per
+   * request, so callers must require every returned request to be allowed.
+   */
+  public static List<RangerAccessRequestImpl> toAccessRequests(
+      PolarisPrincipal principal,
       PolarisResolvedPathWrapper entity,
       PolarisAuthorizableOperation authzOp,
       Set<String> privileges,
       String realmContextId) {
-    return new RangerAccessInfo(
-        RangerUtils.toResourceInfo(entity, realmContextId), authzOp.name(), privileges);
+    RangerAccessResourceImpl resource = toResource(entity, realmContextId);
+
+    return privileges.stream()
+        .map(
+            privilege -> {
+              RangerAccessRequestImpl request = new RangerAccessRequestImpl();
+              request.setResource(resource);
+              request.setAccessType(privilege);
+              request.setAction(authzOp.name());
+              request.setUser(principal.getName());
+              request.setUserGroups(Collections.emptySet());
+              request.setUserRoles(principal.getRoles());
+              return request;
+            })
+        .collect(Collectors.toList());
   }
 
   public static String toResourcePath(
@@ -78,7 +88,7 @@ public class RangerUtils {
     String resourceType =
         toResourceType(resolvedPath.getResolvedLeafEntity().getEntity().getType());
 
-    sb.append(resourceType).append(RangerResourceNameParser.RRN_RESOURCE_TYPE_SEP);
+    sb.append(resourceType).append(RESOURCE_TYPE_SEP);
 
     boolean isFirst = true;
     for (ResolvedPolarisEntity entity : resolvedPath.getResolvedFullPath()) {
@@ -86,51 +96,42 @@ public class RangerUtils {
         sb.append(realmContextId);
         isFirst = false;
         if (entity.getEntity().getType() != PolarisEntityType.ROOT) {
-          sb.append(RangerResourceNameParser.DEFAULT_RRN_RESOURCE_SEP)
-              .append(entity.getEntity().getName());
+          sb.append(RESOURCE_SEP).append(entity.getEntity().getName());
         }
       } else {
-        sb.append(RangerResourceNameParser.DEFAULT_RRN_RESOURCE_SEP)
-            .append(entity.getEntity().getName());
+        sb.append(RESOURCE_SEP).append(entity.getEntity().getName());
       }
     }
     return sb.toString();
   }
 
-  private static RangerResourceInfo toResourceInfo(
+  private static RangerAccessResourceImpl toResource(
       PolarisResolvedPathWrapper resourcePath, String realmContextId) {
-    RangerResourceInfo ret = new RangerResourceInfo();
+    RangerAccessResourceImpl ret = new RangerAccessResourceImpl();
+    StringBuilder namespace = null;
 
-    ret.setName(toResourcePath(resourcePath, realmContextId));
-    ret.setAttributes(getResourceAttributes(resourcePath));
-
-    return ret;
-  }
-
-  private static Map<String, Object> getResourceAttributes(
-      PolarisResolvedPathWrapper resourcePath) {
-    Map<String, Object> ret = null;
+    ret.setValue(ROOT_RESOURCE, realmContextId);
 
     for (ResolvedPolarisEntity resolvedEntity : resourcePath.getResolvedFullPath()) {
-      PolarisEntity entity = resolvedEntity.getEntity();
+      PolarisEntityType type = resolvedEntity.getEntity().getType();
+      String name = resolvedEntity.getEntity().getName();
 
-      if (StringUtils.isNotBlank(entity.getProperties())) {
-        if (ret == null) {
-          ret = new HashMap<>(entity.getPropertiesAsMap());
-        } else {
-          ret.putAll(entity.getPropertiesAsMap());
-        }
+      if (type == PolarisEntityType.ROOT) {
+        continue;
+      }
+
+      if (type == PolarisEntityType.NAMESPACE) {
+        // a nested namespace is a single Ranger resource element, with levels joined by '.'
+        namespace =
+            namespace == null
+                ? new StringBuilder(name)
+                : namespace.append(RESOURCE_SEP).append(name);
+        ret.setValue(toResourceType(type), namespace.toString());
+      } else {
+        ret.setValue(toResourceType(type), name);
       }
     }
 
-    return ret == null ? Collections.emptyMap() : ret;
-  }
-
-  private static Map<String, Object> getUserAttributes(PolarisPrincipal principal) {
-    Map<String, String> properties = principal.getProperties();
-
-    return (properties == null || properties.isEmpty())
-        ? Collections.emptyMap()
-        : new HashMap<>(properties);
+    return ret;
   }
 }
