@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.polaris.core.auth.PolarisAuthorizerFactory;
 import org.apache.polaris.core.config.RealmConfig;
 import org.apache.polaris.core.context.RealmContext;
+import org.apache.ranger.plugin.audit.RangerDefaultAuditHandler;
 import org.apache.ranger.plugin.service.RangerBasePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,10 +59,15 @@ public class RangerPolarisAuthorizerFactory implements PolarisAuthorizerFactory 
         .stringPropertyNames()
         .forEach(k -> plugin.getConfig().set(k, properties.getProperty(k)));
     plugin.init();
+    plugin.setResultProcessor(new RangerDefaultAuditHandler(plugin.getConfig()));
     this.plugin = plugin;
     this.serviceName = config.serviceName().get();
     LOG.info("RangerAuthorizer initialized successfully");
     LOG.debug("RangerPolarisAuthorizerFactory has been activated.");
+  }
+
+  RangerBasePlugin plugin() {
+    return plugin;
   }
 
   @Override
