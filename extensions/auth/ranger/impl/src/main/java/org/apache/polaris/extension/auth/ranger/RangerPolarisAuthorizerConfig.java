@@ -22,6 +22,10 @@ import static com.google.common.base.Preconditions.checkState;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithParentName;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -47,6 +51,39 @@ public interface RangerPolarisAuthorizerConfig {
       }
     }
     return props;
+  }
+
+  default File writeRangerConfig() {
+    try {
+      File file = Files.createTempFile("ranger-polaris-", ".xml").toFile();
+      file.deleteOnExit();
+      Files.writeString(file.toPath(), toHadoopXml(toRangerProperties()), StandardCharsets.UTF_8);
+      return file;
+    } catch (IOException e) {
+      throw new IllegalStateException("Could not write Ranger configuration", e);
+    }
+  }
+
+  private static String toHadoopXml(Properties properties) {
+    StringBuilder xml = new StringBuilder();
+    xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration>\n");
+    for (String name : properties.stringPropertyNames()) {
+      xml.append("  <property>\n    <name>")
+          .append(xmlEscape(name))
+          .append("</name>\n    <value>")
+          .append(xmlEscape(properties.getProperty(name)))
+          .append("</value>\n  </property>\n");
+    }
+    xml.append("</configuration>\n");
+    return xml.toString();
+  }
+
+  private static String xmlEscape(String value) {
+    return value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;");
   }
 
   default void validate() {
