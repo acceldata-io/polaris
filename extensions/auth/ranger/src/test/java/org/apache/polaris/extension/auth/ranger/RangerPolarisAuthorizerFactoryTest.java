@@ -32,7 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.iceberg.exceptions.ForbiddenException;
 import org.apache.polaris.core.auth.PolarisAuthorizableOperation;
 import org.apache.polaris.core.auth.PolarisPrincipal;
@@ -40,6 +42,7 @@ import org.apache.polaris.core.entity.PolarisEntity;
 import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.persistence.PolarisResolvedPathWrapper;
 import org.apache.polaris.core.persistence.ResolvedPolarisEntity;
+import org.apache.ranger.authorization.hadoop.config.RangerPluginConfig;
 import org.apache.ranger.plugin.audit.RangerDefaultAuditHandler;
 import org.apache.ranger.plugin.policyengine.RangerAccessResult;
 import org.apache.ranger.plugin.policyengine.RangerAccessResultProcessor;
@@ -58,6 +61,23 @@ public class RangerPolarisAuthorizerFactoryTest {
   public void testAuthorizerInitMissingServiceName() {
     RangerPolarisAuthorizerConfig config = createConfig(null, Collections.emptyMap());
     assertThrows(IllegalStateException.class, config::validate);
+  }
+
+  @Test
+  public void testPluginConfigHonorsGroupsAndSuperUsers() {
+    Map<String, String> properties = new HashMap<>(createConfig().properties());
+    properties.put("plugin.polaris.use.rangerGroups", "true");
+    properties.put("plugin.polaris.use.only.rangerGroups", "true");
+    properties.put("plugin.polaris.super.users", "alice");
+
+    RangerPolarisAuthorizerFactory factory =
+        new RangerPolarisAuthorizerFactory(createConfig("dev_polaris", properties));
+    RangerPluginConfig pluginConfig = factory.plugin().getConfig();
+
+    assertTrue(pluginConfig.isUseRangerGroups());
+    assertTrue(pluginConfig.isUseOnlyRangerGroups());
+    assertTrue(pluginConfig.isSuperUser("alice"));
+    assertFalse(pluginConfig.isSuperUser("bob"));
   }
 
   @Test
