@@ -21,11 +21,12 @@ package org.apache.polaris.extension.auth.ranger;
 import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.Properties;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.polaris.core.auth.PolarisAuthorizerFactory;
 import org.apache.polaris.core.config.RealmConfig;
 import org.apache.polaris.core.context.RealmContext;
+import org.apache.ranger.authorization.hadoop.config.RangerPluginConfig;
 import org.apache.ranger.plugin.audit.RangerDefaultAuditHandler;
 import org.apache.ranger.plugin.service.RangerBasePlugin;
 import org.slf4j.Logger;
@@ -52,16 +53,21 @@ public class RangerPolarisAuthorizerFactory implements PolarisAuthorizerFactory 
     this.config = config;
     config.validate();
     LOG.info("Initializing RangerAuthorizer");
-    Properties properties = config.toRangerProperties();
-    RangerBasePlugin plugin =
-        new RangerBasePlugin(SERVICE_TYPE, config.serviceName().get(), APP_ID);
-    properties
-        .stringPropertyNames()
-        .forEach(k -> plugin.getConfig().set(k, properties.getProperty(k)));
+    String serviceName = config.serviceName().get();
+    RangerPluginConfig pluginConfig =
+        new RangerPluginConfig(
+            SERVICE_TYPE,
+            serviceName,
+            APP_ID,
+            null,
+            null,
+            List.of(config.writeRangerConfig()),
+            null);
+    RangerBasePlugin plugin = new RangerBasePlugin(pluginConfig);
     plugin.init();
     plugin.setResultProcessor(new RangerDefaultAuditHandler(plugin.getConfig()));
     this.plugin = plugin;
-    this.serviceName = config.serviceName().get();
+    this.serviceName = serviceName;
     LOG.info("RangerAuthorizer initialized successfully");
     LOG.debug("RangerPolarisAuthorizerFactory has been activated.");
   }
