@@ -107,8 +107,9 @@ dependencies {
     api(project(":polaris-spark-integration-3.5_2.12"))
     val ideaActive = providers.systemProperty("idea.active").getOrElse("false").toBoolean()
     if (!ideaActive) {
-      api(project(":polaris-spark-3.5_2.13"))
-      api(project(":polaris-spark-integration-3.5_2.13"))
+      // Included only when scalaVersions.3.5 lists 2.13. ODP builds omit it by default.
+      findProject(":polaris-spark-3.5_2.13")?.let { api(it) }
+      findProject(":polaris-spark-integration-3.5_2.13")?.let { api(it) }
       api(project(":polaris-spark-4.1_2.13"))
       api(project(":polaris-spark-integration-4.1_2.13"))
     }
