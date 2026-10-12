@@ -21,6 +21,9 @@ import java.util.Properties
 import kotlin.jvm.java
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
+import org.apache.polaris.gradle.StripHadoopInetAddressResolverProvider
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.services.BuildService
@@ -340,6 +343,53 @@ abstract class BannedDependenciesService : BuildService<BannedDependenciesServic
 }
 
 bannedDependencies().applyTo(configurations)
+
+// hadoop-client-runtime registers a shaded dnsjava InetAddressResolverProvider that is not
+// packaged in the jar. ServiceLoader treats the missing class as fatal on a flat test classpath.
+// Keep the jar and drop only that service file. The transform is applied to that module alone so
+// other artifacts (poms, test-jars, orbit jars) keep their own artifact types. The packaged
+// Quarkus application strips the same entry via quarkus.class-loading.removed-resources.
+val artifactType = Attribute.of("artifactType", String::class.java)
+val dnsStrippedJar = "dns-stripped-jar"
+
+dependencies {
+  registerTransform(StripHadoopInetAddressResolverProvider::class.java) {
+    from.attribute(artifactType, "jar")
+    to.attribute(artifactType, dnsStrippedJar)
+  }
+}
+
+afterEvaluate {
+  tasks.withType<Test>().configureEach {
+    val runtimeClasspathName =
+      when (name) {
+        "test" -> "testRuntimeClasspath"
+        "intTest" -> "intTestRuntimeClasspath"
+        "cloudTest" -> "cloudTestRuntimeClasspath"
+        else -> return@configureEach
+      }
+    val runtimeClasspath = configurations.findByName(runtimeClasspathName) ?: return@configureEach
+    val strippedHadoopRuntime =
+      runtimeClasspath.incoming
+        .artifactView {
+          componentFilter { identifier ->
+            identifier is ModuleComponentIdentifier &&
+              identifier.group == "org.apache.hadoop" &&
+              identifier.module == "hadoop-client-runtime"
+          }
+          attributes.attribute(artifactType, dnsStrippedJar)
+        }
+        .files
+    val existingClasspath = classpath
+    setClasspath(
+      existingClasspath
+        .filter { file ->
+          !(file.name.contains("hadoop-client-runtime") && file.name.endsWith(".jar"))
+        }
+        .plus(strippedHadoopRuntime)
+    )
+  }
+}
 
 gradle.sharedServices.registerIfAbsent(
   "intTestParallelismConstraint",

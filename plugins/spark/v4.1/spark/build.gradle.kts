@@ -1,0 +1,297 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.api.attributes.java.TargetJvmVersion
+import org.gradle.api.plugins.jvm.JvmTestSuite
+
+plugins {
+  id("polaris-client")
+  id("polaris-server-test-runner")
+}
+
+checkstyle {
+  configProperties =
+    mapOf(
+      "org.checkstyle.google.suppressionfilter.config" to
+        project.file("checkstyle_suppressions.xml").absolutePath
+    )
+}
+
+// get version information
+val sparkMajorVersion = "4.1"
+val scalaVersion = getAndUseScalaVersionForProject()
+val icebergVersion = libs.versions.iceberg.get()
+val spark41Version = libs.versions.spark41.get()
+
+val scalaLibraryVersion = libs.versions.scala213.get()
+val errorProneAnnotationsVersion = libs.errorprone.get().versionConstraint.requiredVersion
+val intTestJvmVersion = 21
+
+dependencies {
+  polarisServer(project(path = ":polaris-server", configuration = "quarkusRunner"))
+
+  // TODO: extract a polaris-rest module as a thin layer for
+  //  client to depends on.
+  implementation(project(":polaris-core")) { isTransitive = false }
+
+  implementation(
+    "org.apache.iceberg:iceberg-spark-runtime-${sparkMajorVersion}_${scalaVersion}:${icebergVersion}"
+  )
+
+  compileOnly("org.scala-lang:scala-library:${scalaLibraryVersion}")
+  compileOnly("org.scala-lang:scala-reflect:${scalaLibraryVersion}")
+  compileOnly("org.apache.spark:spark-sql_${scalaVersion}:${spark41Version}") {
+    // exclude log4j dependencies
+    exclude("org.apache.logging.log4j", "log4j-slf4j2-impl")
+    exclude("org.apache.logging.log4j", "log4j-api")
+    exclude("org.apache.logging.log4j", "log4j-1.2-api")
+    exclude("org.slf4j", "jul-to-slf4j")
+  }
+
+  compileOnly(libs.jspecify)
+  compileOnly(libs.jakarta.validation.api)
+
+  compileOnly(project(":polaris-immutables"))
+  annotationProcessor(project(":polaris-immutables", configuration = "processor"))
+
+  testImplementation(platform(libs.junit.bom))
+  testImplementation("org.junit.jupiter:junit-jupiter")
+  testImplementation(libs.assertj.core)
+  testImplementation(libs.mockito.core)
+
+  testImplementation(
+    "org.apache.iceberg:iceberg-spark-runtime-${sparkMajorVersion}_${scalaVersion}:${icebergVersion}"
+  )
+  testImplementation("org.apache.spark:spark-sql_${scalaVersion}:${spark41Version}") {
+    // exclude log4j dependencies
+    exclude("org.apache.logging.log4j", "log4j-slf4j2-impl")
+    exclude("org.apache.logging.log4j", "log4j-api")
+    exclude("org.apache.logging.log4j", "log4j-1.2-api")
+    exclude("org.slf4j", "jul-to-slf4j")
+  }
+  testImplementation("org.apache.logging.log4j:log4j-api:2.26.1")
+}
+
+testing {
+  suites {
+    register<JvmTestSuite>("intTest") {
+      dependencies {
+        implementation(
+          "org.apache.iceberg:iceberg-spark-runtime-${sparkMajorVersion}_${scalaVersion}:${icebergVersion}"
+        )
+
+        implementation(project(":polaris-api-management-model"))
+
+        implementation(project(":polaris-runtime-test-common"))
+
+        implementation("org.apache.spark:spark-sql_${scalaVersion}:${spark41Version}")
+
+        // Add spark-hive for Hudi integration - provides HiveExternalCatalog that Hudi needs
+        runtimeOnly("org.apache.spark:spark-hive_${scalaVersion}:${spark41Version}")
+        // Delta and Hudi initialize Log4j classes from the Spark runtime. Keep Log4j Core aligned
+        // with the version used by the Spark tests instead of relying on older Hive transitive
+        // deps.
+        runtimeOnly("org.apache.logging.log4j:log4j-core:2.26.1")
+
+        implementation("io.delta:delta-spark_${sparkMajorVersion}_${scalaVersion}:4.3.1")
+        implementation(
+          "org.apache.hudi:hudi-spark${sparkMajorVersion}-bundle_${scalaVersion}:1.2.0"
+        )
+
+        // The hudi-spark-bundle includes most Hive libraries but excludes hive-exec to keep size
+        // manageable
+        // This matches what Spark 4.1 distribution provides (hive-exec-2.3.104-core.jar)
+        implementation("org.apache.hive:hive-exec:2.3.104:core")
+
+        implementation(platform(libs.jackson.bom))
+        implementation("com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider")
+        implementation(libs.jakarta.ws.rs.api)
+        compileOnly("com.google.errorprone:error_prone_annotations:${errorProneAnnotationsVersion}")
+
+        implementation(testFixtures(project(":polaris-runtime-service")))
+
+        implementation(platform(libs.awssdk.bom))
+        implementation("software.amazon.awssdk:glue")
+        implementation("software.amazon.awssdk:kms")
+        implementation("software.amazon.awssdk:dynamodb")
+
+        implementation(platform(libs.testcontainers.bom))
+        implementation("org.testcontainers:testcontainers")
+        implementation(libs.s3mock.testcontainers)
+
+        // Required for Spark integration tests
+        implementation(enforcedPlatform("org.scala-lang:scala-library:${scalaLibraryVersion}"))
+        implementation(enforcedPlatform("org.scala-lang:scala-reflect:${scalaLibraryVersion}"))
+        implementation(libs.javax.servlet.api)
+        implementation(libs.antlr4.runtime.spark41)
+      }
+
+      targets.configureEach {
+        testTask.configure {
+          environment(
+            "AWS_REGION",
+            providers.environmentVariable("AWS_REGION").getOrElse("us-west-2"),
+          )
+          jvmArgs("--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED")
+          // Need to allow a java security manager after Java 21, for Subject.getSubject to work
+          // "getSubject is supported only if a security manager is allowed".
+          systemProperty("java.security.manager", "allow")
+          val logsDir = project.layout.buildDirectory.get().asFile.resolve("logs")
+          // delete files from previous runs
+          doFirst {
+            // delete log files written by Polaris
+            logsDir.deleteRecursively()
+          }
+          withPolarisServer(configurations.polarisServer) {
+            environment.put(
+              "AWS_REGION",
+              providers.environmentVariable("AWS_REGION").orElse("us-west-2"),
+            )
+            environment.put(
+              "AWS_ACCESS_KEY_ID",
+              providers.environmentVariable("AWS_ACCESS_KEY_ID").orElse("ap1"),
+            )
+            environment.put(
+              "AWS_SECRET_ACCESS_KEY",
+              providers.environmentVariable("AWS_SECRET_ACCESS_KEY").orElse("s3cr3t"),
+            )
+            environment.put("AWS_EC2_METADATA_DISABLED", "true")
+            environment.put("POLARIS_BOOTSTRAP_CREDENTIALS", "POLARIS,test-admin,test-secret")
+            systemProperties.put("quarkus.profile", "it")
+            systemProperties.put(
+              "quarkus.log.file.path",
+              logsDir.resolve("polaris.log").absolutePath,
+            )
+          }
+          // For Spark integration tests
+          addSparkJvmOptions()
+        }
+      }
+    }
+  }
+}
+
+sourceSets {
+  main { java { srcDir("../../common/src/main/java") } }
+  test { java { srcDir("../../common/src/test/java") } }
+  named("intTest") {
+    java { srcDir("../../common/src/intTest/java") }
+    resources { srcDir("../../common/src/intTest/resources") }
+  }
+}
+
+listOf("intTestCompileClasspath", "intTestRuntimeClasspath").forEach {
+  // :polaris-runtime-test-common and :polaris-runtime-service (testFixtures) require JVM 21
+  // compatibility.
+  configurations.named(it).configure {
+    attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, intTestJvmVersion)
+  }
+}
+
+// Force jakarta.servlet-api to 5.0.0 for Spark 4.1 compatibility
+// Spark 4.1 requires version 5.0.0 which includes SingleThreadModel
+// Quarkus BOM forces it to 6.x which removed SingleThreadModel
+configurations.named("intTestRuntimeClasspath") {
+  resolutionStrategy {
+    force("jakarta.servlet:jakarta.servlet-api:5.0.0")
+    // Spark 4.1 is built against Netty 4.2 (KQueueIoHandler). The Quarkus BOM
+    // otherwise selects Netty 4.1 for this flat test classpath. Leave netty-tcnative
+    // on its 2.x line. The Quarkus application process keeps the BOM's Netty.
+    eachDependency {
+      if (requested.group == "io.netty" && !requested.name.startsWith("netty-tcnative")) {
+        val version = requested.version
+        if (version == null || version.startsWith("4.")) {
+          useVersion("4.2.13.Final")
+          because("Spark 4.1 requires Netty 4.2")
+        }
+      }
+    }
+  }
+}
+
+val createPolarisSparkJar =
+  tasks.register<ShadowJar>("createPolarisSparkJar") {
+    archiveClassifier = "bundle"
+    isZip64 = true
+
+    // pack both the source code and dependencies
+    from(sourceSets.main.map { it.output })
+    configurations = provider { listOf(project.configurations.runtimeClasspath.get()) }
+
+    // Includes _all_ duplicates (this is applied files processed by `ShadowJar`).
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    // This setting applies to the _result_ of the `ShadowJar`.
+    failOnDuplicateEntries = true
+
+    // Generally, preserve META-INF/maven/*/*/pom.* files for downstream tools that
+    // can analyze dependency jars.
+    //
+    // There are quite a few _duplicated_ occurrences of failureaccess, guava,
+    // listenablefuture, error_prone_annotations, j2objc-annotations, gson.
+    // Leave those here so that dependency analyzing tools can pick those up.
+
+    exclude(
+      // Recursively remove all LICENSE and NOTICE file under META-INF, includes
+      // directories contains 'license' in the name.
+      "META-INF/**/*LICENSE*",
+      "META-INF/**/*NOTICE*",
+      // exclude the top level LICENSE, LICENSE-*.txt and NOTICE
+      "LICENSE*",
+      "NOTICE*",
+
+      // Exclude Jandex indexes
+      "META-INF/jandex.idx",
+
+      // From Hive/Hadoop - exclude those to not confuse people.
+      "META-INF/DEPENDENCIES",
+    )
+
+    // add polaris customized LICENSE and NOTICE for the bundle jar at top level. Note that the
+    // customized LICENSE and NOTICE file are called BUNDLE-LICENSE and BUNDLE-NOTICE,
+    // and renamed to LICENSE and NOTICE after include, this is to avoid the file
+    // being excluded due to the exclude pattern matching used above.
+    from("${projectDir}/BUNDLE-LICENSE") { rename { "LICENSE" } }
+    from("${projectDir}/BUNDLE-NOTICE") { rename { "NOTICE" } }
+  }
+
+// ensure the shadow jar job (which will automatically run license addition) is run for both
+// `assemble` and `build` task
+tasks.named("assemble") { dependsOn(createPolarisSparkJar) }
+
+tasks.named("build") { dependsOn(createPolarisSparkJar) }
+
+// The `src/main/no-license-notice-marker` file disables the standard META-INF/LICENSE+NOTICE
+// injection for this module, because the shadow bundle jar carries its own root-level
+// BUNDLE-LICENSE/BUNDLE-NOTICE. The main, sources and javadoc jars still need the ASF LICENSE and
+// NOTICE under META-INF, so add them back explicitly for those jars (the bundle jar is left as-is).
+listOf("jar", "sourcesJar", "javadocJar").forEach { jarTask ->
+  tasks.named<Jar>(jarTask) {
+    from(layout.settingsDirectory) {
+      include("gradle/jar-licenses/LICENSE", "gradle/jar-licenses/NOTICE")
+      eachFile { path = "META-INF/$sourceName" }
+    }
+  }
+}
+
+publishing {
+  publications.named<MavenPublication>("maven") {
+    artifact(createPolarisSparkJar)
+  }
+}

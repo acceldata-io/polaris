@@ -111,7 +111,7 @@ dependencies {
     val ideaActive = providers.systemProperty("idea.active").getOrElse("false").toBoolean()
     if (!ideaActive) {
       api(project(":polaris-spark-3.5_2.13"))
-      api(project(":polaris-spark-4.0_2.13"))
+      api(project(":polaris-spark-4.1_2.13"))
     }
 
     api(project(":polaris-admin"))

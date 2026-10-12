@@ -21,7 +21,7 @@
 
 This directory contains the Polaris Spark plugins. The plugins are built for specific versions of Spark:
 - [Spark 3.5](./v3.5/getting-started/README.md)
-- [Spark 4.0](./v4.0/getting-started/README.md)
+- [Spark 4.1](./v4.1/getting-started/README.md)
 
 The Polaris Spark plugin provides a SparkCatalog class, which communicates with the Polaris
 REST endpoints, and provides implementations for Apache Spark's
@@ -29,12 +29,12 @@ REST endpoints, and provides implementations for Apache Spark's
 - [ViewCatalog](https://github.com/apache/spark/blob/v3.5.6/sql/catalyst/src/main/java/org/apache/spark/sql/connector/catalog/ViewCatalog.java)
 - [SupportsNamespaces](https://github.com/apache/spark/blob/v3.5.6/sql/catalyst/src/main/java/org/apache/spark/sql/connector/catalog/SupportsNamespaces.java)
 
-The plugin provides support for Spark 3.5 (Scala version 2.12 and 2.13) and Spark 4.0 (Scala version 2.13).
+The plugin provides support for Spark 3.5 (Scala version 2.12 and 2.13) and Spark 4.1 (Scala version 2.13).
 
 The Polaris Spark client supports catalog management for both Iceberg and Delta tables. It routes all Iceberg table
 requests to the Iceberg REST endpoints and routes all Delta table requests to the Generic Table REST endpoints.
 
-The Spark Client requires at least delta 3.2.1 to work with Delta tables for Spark 3.5, and delta 4.2.0 for Spark 4.0.
+The Spark Client requires at least delta 3.2.1 to work with Delta tables for Spark 3.5, and delta 4.3.1 for Spark 4.1.
 
 # Start Spark with local Polaris service using the Polaris Spark plugin
 The following command starts a Polaris server for local testing, it runs on localhost:8181 with default

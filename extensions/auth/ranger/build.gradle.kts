@@ -39,6 +39,7 @@ dependencies {
   implementation(libs.ranger.plugins.cred) {
     exclude("org.slf4j", "slf4j-reload4j")
   }
+  implementation(libs.hadoop.client.api)
 
   implementation(libs.commons.lang3)
   implementation(libs.guava)
@@ -84,8 +85,6 @@ testing {
       targets {
         all {
           val buildDir = project.layout.buildDirectory
-          val policyDir =
-            project.layout.projectDirectory.dir("src/intTest/resources/authz_it_tests")
           testTask.configure {
             environment(
               "AWS_REGION",
@@ -119,12 +118,16 @@ testing {
                   "quarkus.log.file.path" to logsDir.resolve("polaris.log").absolutePath,
                   "polaris.authorization.type" to "ranger",
                   "polaris.authorization.ranger.service-name" to "dev_polaris",
-                  "polaris.authorization.ranger.authz.default.policy.source.impl" to
-                    "org.apache.ranger.admin.client.LocalFolderPolicySource",
-                  "polaris.authorization.ranger.authz.default.enable.implicit.userstore.enricher" to
+                  // Ranger reads ranger.plugin.<serviceType>.policy.source.impl. The previous
+                  // authz.default.* keys were ignored, so it fell back to RangerAdminRESTClient.
+                  "polaris.authorization.ranger.plugin.polaris.policy.source.impl" to
+                    "org.apache.polaris.extension.auth.ranger.test.ClasspathRangerPolicySource",
+                  "polaris.authorization.ranger.plugin.polaris.test.policy.resource.path" to
+                    "/authz_it_tests",
+                  "polaris.authorization.ranger.plugin.polaris.policy.cache.dir" to
+                    buildDirFile.resolve("ranger-policy-cache").absolutePath,
+                  "polaris.authorization.ranger.plugin.polaris.enable.implicit.userstore.enricher" to
                     "true",
-                  "polaris.authorization.ranger.authz.default.policy.source.local_folder.path" to
-                    policyDir.asFile.absolutePath,
                   "polaris.features.\"SUPPORTED_CATALOG_STORAGE_TYPES\"" to "[\"FILE\"]",
                   "polaris.features.\"ALLOW_INSECURE_STORAGE_TYPES\"" to "true",
                   "polaris.readiness.ignore-severe-issues" to "true",
