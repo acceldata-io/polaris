@@ -42,6 +42,13 @@ dependencies {
   intTestImplementation(platform(libs.testcontainers.bom))
   intTestImplementation("org.testcontainers:testcontainers-junit-jupiter")
   intTestImplementation(project(":polaris-container-spec-helper"))
+
+  // ClasspathRangerPolicySource implements Ranger's admin client SPI and is loaded by the
+  // application class loader.
+  implementation(libs.ranger.plugins.common) {
+    exclude("org.slf4j", "slf4j-reload4j")
+  }
+  implementation(libs.hadoop.client.api)
 }
 
 sourceSets.named("intTest") {

@@ -165,7 +165,10 @@ fun RepositoryHandler.addAcceldataRepositories() {
 dependencyResolutionManagement {
   repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
   repositories {
-    mavenLocal()
+    // mavenLocal() is omitted because Gradle treats it as the sole source for a module once
+    // the POM is present. An incomplete install (for example orc-core without the nohive
+    // classifier jar) then fails resolution instead of falling through to later repositories.
+    // mavenLocal()
     addAcceldataRepositories()
     mavenCentral()
     val useApacheSnapshots =

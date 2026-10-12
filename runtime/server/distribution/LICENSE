@@ -939,15 +939,6 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 
-This product bundles Apache Commons Collections.
-
-* Maven group:artifact IDs: org.apache.commons:commons-collections4
-
-Project URL: http://commons.apache.org/collections/
-License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
-
---------------------------------------------------------------------------------
-
 This product bundles Apache Commons IO.
 
 * Maven group:artifact IDs: commons-io:commons-io
@@ -1430,7 +1421,9 @@ This product bundles Apache Hadoop.
 * Maven group:artifact IDs: org.apache.hadoop:hadoop-client-api
 * Maven group:artifact IDs: org.apache.hadoop:hadoop-client-runtime
 * Maven group:artifact IDs: org.apache.hadoop:hadoop-common
+* Maven group:artifact IDs: org.apache.hadoop.thirdparty:hadoop-shaded-avro_1_11
 * Maven group:artifact IDs: org.apache.hadoop.thirdparty:hadoop-shaded-guava
+* Maven group:artifact IDs: org.apache.hadoop.thirdparty:hadoop-shaded-protobuf_3_25
 
 Project URL: https://hadoop.apache.org/
 License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
@@ -2011,14 +2004,10 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 This product bundles Apache Ranger libraries.
 
-* Maven group:artifact IDs: org.apache.ranger:authz-embedded
-* Maven group:artifact IDs: org.apache.ranger:ranger-audit-core
-* Maven group:artifact IDs: org.apache.ranger:ranger-audit-dest-solr
-* Maven group:artifact IDs: org.apache.ranger:ranger-authz-api
 * Maven group:artifact IDs: org.apache.ranger:ranger-plugin-classloader
+* Maven group:artifact IDs: org.apache.ranger:ranger-plugins-audit
 * Maven group:artifact IDs: org.apache.ranger:ranger-plugins-common
 * Maven group:artifact IDs: org.apache.ranger:ranger-plugins-cred
-* Maven group:artifact IDs: org.apache.ranger:ugsync-util
 
 Project URL: https://github.com/apache/ranger
 License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
@@ -2030,7 +2019,13 @@ This product bundles Jetty libraries.
 * Maven group:artifact IDs: org.eclipse.jetty:jetty-client
 * Maven group:artifact IDs: org.eclipse.jetty:jetty-http
 * Maven group:artifact IDs: org.eclipse.jetty:jetty-io
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-security
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-server
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-servlet
 * Maven group:artifact IDs: org.eclipse.jetty:jetty-util
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-util-ajax
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-webapp
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-xml
 
 Home page: https://github.com/jetty/jetty.project/
 License: Eclipse Public License 2.0 - https://projects.eclipse.org/license/epl-2.0
@@ -2258,5 +2253,128 @@ Note: GraalVM licensing documentation identifies this shaded code as XZ for Java
 |  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
 |  NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 |  CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+This product bundles additional Apache-licensed libraries pulled in by Hadoop and Ranger.
+
+* Maven group:artifact IDs: at.yawk.lz4:lz4-java
+* Maven group:artifact IDs: ch.qos.reload4j:reload4j
+* Maven group:artifact IDs: com.amazonaws:aws-java-sdk-core
+* Maven group:artifact IDs: com.amazonaws:aws-java-sdk-logs
+* Maven group:artifact IDs: com.amazonaws:jmespath-java
+* Maven group:artifact IDs: com.fasterxml.jackson.dataformat:jackson-dataformat-cbor
+* Maven group:artifact IDs: com.github.spullara.mustache.java:compiler
+* Maven group:artifact IDs: com.tdunning:t-digest
+* Maven group:artifact IDs: io.dropwizard.metrics:metrics-core
+* Maven group:artifact IDs: io.sgr:s2-geometry-library-java
+* Maven group:artifact IDs: org.apache.hive:hive-storage-api
+* Maven group:artifact IDs: org.apache.kafka:kafka-clients
+* Maven group:artifact IDs: org.apache.kerby:kerb-admin
+* Maven group:artifact IDs: org.apache.kerby:kerb-client
+* Maven group:artifact IDs: org.apache.kerby:kerb-common
+* Maven group:artifact IDs: org.apache.kerby:kerb-identity
+* Maven group:artifact IDs: org.apache.kerby:kerb-server
+* Maven group:artifact IDs: org.apache.kerby:kerb-simplekdc
+* Maven group:artifact IDs: org.apache.kerby:kerby-xdr
+* Maven group:artifact IDs: org.apache.kerby:token-provider
+* Maven group:artifact IDs: org.apache.logging.log4j:log4j-api
+* Maven group:artifact IDs: org.apache.logging.log4j:log4j-core
+* Maven group:artifact IDs: org.apache.lucene:lucene-analyzers-common
+* Maven group:artifact IDs: org.apache.lucene:lucene-backward-codecs
+* Maven group:artifact IDs: org.apache.lucene:lucene-core
+* Maven group:artifact IDs: org.apache.lucene:lucene-grouping
+* Maven group:artifact IDs: org.apache.lucene:lucene-highlighter
+* Maven group:artifact IDs: org.apache.lucene:lucene-join
+* Maven group:artifact IDs: org.apache.lucene:lucene-memory
+* Maven group:artifact IDs: org.apache.lucene:lucene-misc
+* Maven group:artifact IDs: org.apache.lucene:lucene-queries
+* Maven group:artifact IDs: org.apache.lucene:lucene-queryparser
+* Maven group:artifact IDs: org.apache.lucene:lucene-sandbox
+* Maven group:artifact IDs: org.apache.lucene:lucene-spatial
+* Maven group:artifact IDs: org.apache.lucene:lucene-spatial-extras
+* Maven group:artifact IDs: org.apache.lucene:lucene-spatial3d
+* Maven group:artifact IDs: org.apache.lucene:lucene-suggest
+* Maven group:artifact IDs: org.apache.orc:orc-core
+* Maven group:artifact IDs: org.apache.orc:orc-shims
+* Maven group:artifact IDs: org.codehaus.jettison:jettison
+* Maven group:artifact IDs: org.elasticsearch.client:elasticsearch-rest-client
+* Maven group:artifact IDs: org.elasticsearch:securesm
+* Maven group:artifact IDs: org.jboss.xnio:xnio-api
+* Maven group:artifact IDs: org.locationtech.spatial4j:spatial4j
+* Maven group:artifact IDs: org.wildfly.client:wildfly-client-config
+
+License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
+
+--------------------------------------------------------------------------------
+
+This product bundles Logback.
+
+* Maven group:artifact IDs: ch.qos.logback:logback-classic
+* Maven group:artifact IDs: ch.qos.logback:logback-core
+
+Home page: https://logback.qos.ch/
+License: Eclipse Public License 1.0 or GNU Lesser General Public License 2.1
+
+--------------------------------------------------------------------------------
+
+This product bundles zstd-jni.
+
+* Maven group:artifact IDs: com.github.luben:zstd-jni
+
+Home page: https://github.com/luben/zstd-jni
+License: BSD 2-Clause
+
+--------------------------------------------------------------------------------
+
+This product bundles Jersey.
+
+* Maven group:artifact IDs: com.github.pjfanning:jersey-json
+* Maven group:artifact IDs: com.sun.jersey:jersey-core
+* Maven group:artifact IDs: com.sun.jersey:jersey-server
+* Maven group:artifact IDs: com.sun.jersey:jersey-servlet
+
+Home page: https://eclipse-ee4j.github.io/jersey/
+License: Common Development and Distribution License 1.1 or GNU General Public License 2.0 with the Classpath Exception
+
+--------------------------------------------------------------------------------
+
+This product bundles JAXB.
+
+* Maven group:artifact IDs: com.sun.xml.bind:jaxb-impl
+
+Home page: https://eclipse-ee4j.github.io/jaxb-ri/
+License: Eclipse Distribution License 1.0
+
+--------------------------------------------------------------------------------
+
+This product bundles JOpt Simple.
+
+* Maven group:artifact IDs: net.sf.jopt-simple:jopt-simple
+
+Home page: https://github.com/jopt-simple/jopt-simple
+License: MIT License
+
+--------------------------------------------------------------------------------
+
+This product bundles Elasticsearch.
+
+* Maven group:artifact IDs: org.elasticsearch.client:elasticsearch-rest-high-level-client
+* Maven group:artifact IDs: org.elasticsearch.plugin:aggs-matrix-stats-client
+* Maven group:artifact IDs: org.elasticsearch.plugin:lang-mustache-client
+* Maven group:artifact IDs: org.elasticsearch.plugin:mapper-extras-client
+* Maven group:artifact IDs: org.elasticsearch.plugin:parent-join-client
+* Maven group:artifact IDs: org.elasticsearch.plugin:rank-eval-client
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch-cli
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch-core
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch-geo
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch-lz4
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch-plugin-classloader
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch-secure-sm
+* Maven group:artifact IDs: org.elasticsearch:elasticsearch-x-content
+
+Home page: https://www.elastic.co/elasticsearch
+License: Server Side Public License 1.0 or Elastic License 2.0 - https://www.elastic.co/licensing/elastic-license
 
 --------------------------------------------------------------------------------

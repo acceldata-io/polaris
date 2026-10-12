@@ -54,9 +54,14 @@ if (providers.systemProperty("idea.sync.active").getOrElse("false").toBoolean())
 eclipse { project { name = ideName } }
 
 allprojects {
-  configurations.all {
+  configurations.configureEach {
+    // org.lz4:lz4-java:1.8.1 is a relocation POM for at.yawk.lz4:lz4-java, and both
+    // publish the org.lz4:lz4-java capability. Selecting the relocation POM yields a
+    // jar-less module that depends on itself, which overflows Quarkus's classpath walk.
     resolutionStrategy.capabilitiesResolution.withCapability("org.lz4:lz4-java") {
-      val preferred = candidates.find { (it.id as? ModuleComponentIdentifier)?.group == "org.lz4" }
+      val preferred = candidates.find {
+        (it.id as? ModuleComponentIdentifier)?.group == "at.yawk.lz4"
+      }
       select(preferred ?: candidates.first())
     }
   }

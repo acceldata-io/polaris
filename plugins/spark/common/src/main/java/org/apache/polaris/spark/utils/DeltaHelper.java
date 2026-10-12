@@ -20,6 +20,8 @@ package org.apache.polaris.spark.utils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.iceberg.common.DynConstructors;
 import org.apache.polaris.spark.PolarisSparkCatalog;
 import org.apache.spark.sql.connector.catalog.DelegatingCatalogExtension;
@@ -45,13 +47,18 @@ public class DeltaHelper {
   private static final Logger LOG = LoggerFactory.getLogger(DeltaHelper.class);
 
   public static final String DELTA_CATALOG_IMPL_KEY = "delta-catalog-impl";
+  // Delta 4.3 defaults this to true and then loads a Unity Catalog client. Polaris creates Delta
+  // tables through the delegate catalog, so leave the client disabled unless the caller opts in.
+  static final String DELTA_REST_API_ENABLED_KEY = "deltaRestApi.enabled";
   private static final String DEFAULT_DELTA_CATALOG_CLASS =
       "org.apache.spark.sql.delta.catalog.DeltaCatalog";
 
   private TableCatalog deltaCatalog = null;
   private String deltaCatalogImpl = DEFAULT_DELTA_CATALOG_CLASS;
+  private final CaseInsensitiveStringMap catalogOptions;
 
   public DeltaHelper(CaseInsensitiveStringMap options) {
+    this.catalogOptions = options;
     if (options.get(DELTA_CATALOG_IMPL_KEY) != null) {
       this.deltaCatalogImpl = options.get(DELTA_CATALOG_IMPL_KEY);
     }
@@ -83,6 +90,10 @@ public class DeltaHelper {
 
     // set the polaris spark catalog as the delegate catalog of delta catalog
     ((DelegatingCatalogExtension) this.deltaCatalog).setDelegateCatalog(polarisSparkCatalog);
+
+    // Delta 4.3 reads these options from AbstractDeltaCatalog during createTable, before any
+    // later write. The field stays null unless initialize stores it, and getBoolean then NPEs.
+    this.deltaCatalog.initialize(polarisSparkCatalog.name(), deltaCatalogOptions());
 
     // We want to behave exactly the same as unity catalog for Delta. However, DeltaCatalog
     // implementation today is hard coded for unity catalog. Following issue is used to track
@@ -127,6 +138,14 @@ public class DeltaHelper {
       throw new RuntimeException("Failed to set the isUnityCatalog field", e);
     }
     return this.deltaCatalog;
+  }
+
+  private CaseInsensitiveStringMap deltaCatalogOptions() {
+    Map<String, String> resolved = new HashMap<>(catalogOptions.asCaseSensitiveMap());
+    if (catalogOptions.get(DELTA_REST_API_ENABLED_KEY) == null) {
+      resolved.put(DELTA_REST_API_ENABLED_KEY, "false");
+    }
+    return new CaseInsensitiveStringMap(resolved);
   }
 
   private static Field findUnityCatalogField(Class<?> clazz) {
