@@ -34,14 +34,20 @@ public final class RangerTestProfiles {
       Map<String, String> config = new HashMap<>();
       config.put("polaris.authorization.type", "ranger");
       config.put("polaris.authorization.ranger.service-name", "dev_polaris");
+      // Ranger reads ranger.plugin.<serviceType>.policy.source.impl. The previous
+      // authz.default.* keys were ignored, so it fell back to RangerAdminRESTClient with no URL.
       config.put(
-          "polaris.authorization.ranger.authz.default.policy.source.impl",
-          "org.apache.ranger.admin.client.EmbeddedResourcePolicySource");
+          "polaris.authorization.ranger.plugin.polaris.policy.source.impl",
+          ClasspathRangerPolicySource.class.getName());
       config.put(
-          "polaris.authorization.ranger.authz.default.enable.implicit.userstore.enricher", "true");
-      config.put(
-          "polaris.authorization.ranger.authz.default.policy.source.embedded_resource.path",
+          "polaris.authorization.ranger.plugin.polaris.test.policy.resource.path",
           "/authz_it_tests");
+      config.put(
+          "polaris.authorization.ranger.plugin.polaris.policy.cache.dir",
+          "build/ranger-policy-cache");
+      // Policy conditions such as USER.allowedSensitiveLevel need the user-store enricher.
+      config.put(
+          "polaris.authorization.ranger.plugin.polaris.enable.implicit.userstore.enricher", "true");
       config.put("polaris.features.\"SUPPORTED_CATALOG_STORAGE_TYPES\"", "[\"FILE\"]");
       config.put("polaris.features.\"ALLOW_INSECURE_STORAGE_TYPES\"", "true");
       config.put("polaris.readiness.ignore-severe-issues", "true");
