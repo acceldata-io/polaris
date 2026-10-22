@@ -32,6 +32,7 @@ import org.apache.polaris.core.connection.ConnectionConfigInfoDpo;
 import org.apache.polaris.core.connection.ConnectionType;
 import org.apache.polaris.core.connection.hive.HiveConnectionConfigInfoDpo;
 import org.apache.polaris.core.credentials.PolarisCredentialManager;
+import org.apache.polaris.extensions.federation.hadoop.HadoopKerberosLogin;
 
 /** Factory class for creating a Hive catalog handle based on connection configuration. */
 @ApplicationScoped
@@ -52,6 +53,7 @@ public class HiveFederatedCatalogFactory implements FederatedCatalogFactory {
         != AuthenticationType.IMPLICIT.getCode()) {
       throw new IllegalStateException("Hive federation only supports IMPLICIT authentication.");
     }
+    HadoopKerberosLogin.ensureLoggedIn();
     String warehouse = ((HiveConnectionConfigInfoDpo) connectionConfigInfoDpo).getWarehouse();
     // Unlike Hadoop, HiveCatalog does not require us to create a Configuration object, the iceberg
     // rest library find the default configuration by reading hive-site.xml in the classpath
