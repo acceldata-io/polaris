@@ -25,6 +25,7 @@ plugins {
 dependencies {
   // Polaris dependencies
   implementation(project(":polaris-core"))
+  implementation(project(":polaris-extensions-federation-hadoop"))
 
   implementation(platform(libs.iceberg.bom))
   implementation("org.apache.iceberg:iceberg-api")
