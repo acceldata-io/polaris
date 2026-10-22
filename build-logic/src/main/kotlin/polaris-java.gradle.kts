@@ -361,14 +361,11 @@ dependencies {
 
 afterEvaluate {
   tasks.withType<Test>().configureEach {
-    val runtimeClasspathName =
-      when (name) {
-        "test" -> "testRuntimeClasspath"
-        "intTest" -> "intTestRuntimeClasspath"
-        "cloudTest" -> "cloudTestRuntimeClasspath"
-        else -> return@configureEach
-      }
-    val runtimeClasspath = configurations.findByName(runtimeClasspathName) ?: return@configureEach
+    // JVM test suites name the runtime classpath after the test task, including custom suites
+    // such as catalogFederationIntTest. Those classpaths are flat, so the same missing
+    // dnsjava provider is fatal there too.
+    val runtimeClasspath =
+      configurations.findByName("${name}RuntimeClasspath") ?: return@configureEach
     val strippedHadoopRuntime =
       runtimeClasspath.incoming
         .artifactView {
