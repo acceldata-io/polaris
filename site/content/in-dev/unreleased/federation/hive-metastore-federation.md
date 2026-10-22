@@ -68,8 +68,8 @@ For Kubernetes deployments, add these properties to the ConfigMap mounted into t
   classpath. Provide `hive-site.xml` (and `core-site.xml` if needed) via
   `HADOOP_CONF_DIR`/`HIVE_CONF_DIR` or an image layer.
 - **Authentication:** Hive federation only supports `IMPLICIT` authentication, meaning Polaris uses
-  the operating-system or Kerberos identity of the running process (no stored secrets). Ensure the
-  service principal is logged in or holds a valid keytab/TGT before starting Polaris.
+  the operating-system or Kerberos identity of the running process (no stored secrets). For
+  Kerberos, put the service principal and keytab in the JVM JAAS configuration described below.
 - **Object storage role:** Configure `polaris.service-identity.<realm>.aws-iam.*` (or the default
   realm) so the server can assume the AWS role referenced by the catalog. The IAM role must allow
   STS access from the Polaris service identity and grant permissions to the table locations.
@@ -87,10 +87,14 @@ kinit -kt /etc/polaris/keytabs/polaris.keytab polaris/service@EXAMPLE.COM
 
 - `hive-site.xml` must define `hive.metastore.sasl.enabled=true`, the metastore principal, and
   client principal pattern (for example `hive.metastore.client.kerberos.principal=polaris/_HOST@REALM`).
-- The JAAS entry (referenced by `java.security.auth.login.config`) should use `useKeyTab=true` and
-  point to the same keytab shown above so the Polaris JVM can refresh credentials automatically.
-- Keep the keytab readable solely by the Polaris service user; the implicit authenticator consumes
-  the TGT at startup and for periodic renewal.
+- The JAAS file referenced by `java.security.auth.login.config` must contain a `Client` entry for
+  `com.sun.security.auth.module.Krb5LoginModule` with `useKeyTab=true`, `principal`, and `keyTab`.
+  `com.sun.security.jgss.krb5.initiate` is used when `Client` has no keytab. On the first Hadoop or
+  Hive federated catalog, Polaris reads that principal and keytab and calls
+  `UserGroupInformation.loginUserFromKeytab` with keytab auto-renewal enabled. Hadoop's renewal
+  thread then replaces the ticket from the keytab before it expires. The JAAS entry only supplies
+  the keytab location; it does not renew the ticket by itself.
+- Keep the keytab readable solely by the Polaris service user.
 
 ## Warehouse access patterns
 

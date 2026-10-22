@@ -53,6 +53,7 @@ public class HadoopFederatedCatalogFactory implements FederatedCatalogFactory {
         != AuthenticationType.IMPLICIT.getCode()) {
       throw new IllegalStateException("Hadoop federation only supports IMPLICIT authentication.");
     }
+    HadoopKerberosLogin.ensureLoggedIn();
     String warehouse = ((HadoopConnectionConfigInfoDpo) connectionConfigInfoDpo).getWarehouse();
     Map<String, String> mergedProperties =
         RESTUtil.merge(
