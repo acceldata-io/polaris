@@ -82,7 +82,13 @@ dependencies {
 }
 
 configurations.configureEach {
-  // Validate that Logback dependencies are not used in Quarkus modules.
+  // Hadoop auth depends on ZooKeeper, and ZooKeeper publishes Logback. Exclude
+  // Logback from Quarkus classpaths so SLF4J stays on JBoss LogManager and
+  // quarkus.log.file.* receives application logs.
+  exclude(group = "ch.qos.logback", module = "logback-classic")
+  exclude(group = "ch.qos.logback", module = "logback-core")
+
+  // Validate that Logback dependencies are not declared by Quarkus modules.
   dependencies.configureEach {
     if (group == "ch.qos.logback") {
       throw GradleException(
