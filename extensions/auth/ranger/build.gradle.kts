@@ -39,7 +39,6 @@ dependencies {
   implementation(libs.ranger.plugins.cred) {
     exclude("org.slf4j", "slf4j-reload4j")
   }
-  implementation(libs.hadoop.client.api)
 
   implementation(libs.commons.lang3)
   implementation(libs.guava)
