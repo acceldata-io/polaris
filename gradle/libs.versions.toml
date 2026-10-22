@@ -19,18 +19,18 @@
 
 [versions]
 checkstyle = "13.9.0"
-hadoop = "3.3.6.3.3.6.5-SNAPSHOT"
+hadoop = "3.3.6.3.3.6.6-SNAPSHOT"
 iceberg = "1.11.0" # Ensure to update the iceberg version in regtests and getting-started to keep them up-to-date
 immutables = "2.12.2"
 jmh = "1.37"
 picocli = "4.7.7"
 quarkus = "3.37.4"
-ranger = "2.5.0.3.3.6.5-SNAPSHOT"
+ranger = "2.5.0.3.3.6.6-SNAPSHOT"
 ranger-graalvm = "25.1.3"
 scala212 = "2.12.21"
 scala213 = "2.13.18"
-spark35 = "3.5.5.3.3.6.5-SNAPSHOT"
-spark41 = "4.1.1.3.3.6.5-SNAPSHOT"
+spark35 = "3.5.5.3.3.6.6-SNAPSHOT"
+spark41 = "4.1.1.3.3.6.6-SNAPSHOT"
 swagger = "1.6.16"
 
 [bundles]
