@@ -135,11 +135,13 @@ plugins {
 fun MavenArtifactRepository.acceldataCredentials() {
   val usernameProvider =
     providers
-      .gradleProperty("acceldataRepoUsername")
+      .gradleProperty("mavenUsername")
+      .orElse(providers.gradleProperty("acceldataRepoUsername"))
       .orElse(providers.environmentVariable("ACCELDATA_REPO_USERNAME"))
   val passwordProvider =
     providers
-      .gradleProperty("acceldataRepoPassword")
+      .gradleProperty("mavenPassword")
+      .orElse(providers.gradleProperty("acceldataRepoPassword"))
       .orElse(providers.environmentVariable("ACCELDATA_REPO_PASSWORD"))
   if (usernameProvider.isPresent && passwordProvider.isPresent) {
     credentials {
