@@ -2241,7 +2241,7 @@ This product bundles Apache Ranger libraries.
 
 * Maven group:artifact IDs: org.apache.ranger:authz-embedded
 * Maven group:artifact IDs: org.apache.ranger:ranger-audit-core
-* Maven group:artifact IDs: org.apache.ranger:ranger-audit-dest-solr
+* Maven group:artifact IDs: org.apache.ranger:ranger-audit-dest-auditserver
 * Maven group:artifact IDs: org.apache.ranger:ranger-authz-api
 * Maven group:artifact IDs: org.apache.ranger:ranger-common-utils
 * Maven group:artifact IDs: org.apache.ranger:ranger-plugin-classloader
@@ -2254,21 +2254,6 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 
-This product bundles Jetty libraries.
-
-* Maven group:artifact IDs: org.eclipse.jetty:jetty-client
-* Maven group:artifact IDs: org.eclipse.jetty:jetty-http
-* Maven group:artifact IDs: org.eclipse.jetty:jetty-io
-* Maven group:artifact IDs: org.eclipse.jetty:jetty-util
-
-Also includes Jetty Util Ajax, WebApp, XML, and WebSocket API, client, and common
-components.
-
-Home page: https://github.com/jetty/jetty.project/
-License: Eclipse Public License 2.0 - https://projects.eclipse.org/license/epl-2.0
-
---------------------------------------------------------------------------------
-
 This product bundles FasterXML libraries.
 
 * Maven group:artifact IDs: com.fasterxml.jackson.jaxrs:jackson-jaxrs-base
@@ -2276,17 +2261,6 @@ This product bundles FasterXML libraries.
 * Maven group:artifact IDs: com.fasterxml.jackson.module:jackson-module-jaxb-annotations
 
 Home page: https://github.com/FasterXML/
-License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
-
---------------------------------------------------------------------------------
-
-This product bundles HttpComponents libraries.
-
-* Maven group:artifact IDs: org.apache.httpcomponents:httpasyncclient
-* Maven group:artifact IDs: org.apache.httpcomponents:httpcore-nio
-* Maven group:artifact IDs: org.apache.httpcomponents:httpmime
-
-Home page: https://hc.apache.org/
 License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
@@ -2320,15 +2294,6 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 
-This product bundles Commons Lang library.
-
-* Maven group:artifact IDs: commons-lang:commons-lang
-
-Home page: https://github.com/apache/commons-lang
-License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
-
---------------------------------------------------------------------------------
-
 This product bundles High Performance Primitive Collections library.
 
 * Maven group:artifact IDs: com.carrotsearch:hppc
@@ -2343,15 +2308,6 @@ This product bundles Joda Time library.
 * Maven group:artifact IDs: joda-time:joda-time
 
 Home page: https://github.com/JodaOrg/joda-time
-License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
-
---------------------------------------------------------------------------------
-
-This product bundles Apache Solr library.
-
-* Maven group:artifact IDs: org.apache.solr:solr-solrj
-
-Home page: https://github.com/apache/solr
 License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
@@ -2398,13 +2354,39 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 
-This product bundles Jersey Bundle library.
+This product bundles Jersey libraries.
 
-* Maven group:artifact IDs: com.sun.jersey:jersey-core
-* Maven group:artifact IDs: com.sun.jersey:jersey-client
+* Maven group:artifact IDs: org.glassfish.jersey.core:jersey-client
+* Maven group:artifact IDs: org.glassfish.jersey.core:jersey-common
+* Maven group:artifact IDs: org.glassfish.jersey.ext:jersey-entity-filtering
+* Maven group:artifact IDs: org.glassfish.jersey.inject:jersey-hk2
+* Maven group:artifact IDs: org.glassfish.jersey.media:jersey-media-json-jackson
 
 Home page: https://github.com/eclipse-ee4j/jersey
 License: Eclipse Public License 2.0 - https://projects.eclipse.org/license/epl-2.0
+
+--------------------------------------------------------------------------------
+
+This product bundles Eclipse HK2 libraries.
+
+* Maven group:artifact IDs: org.glassfish.hk2:hk2-api
+* Maven group:artifact IDs: org.glassfish.hk2:hk2-locator
+* Maven group:artifact IDs: org.glassfish.hk2:hk2-utils
+* Maven group:artifact IDs: org.glassfish.hk2:osgi-resource-locator
+* Maven group:artifact IDs: org.glassfish.hk2.external:aopalliance-repackaged
+* Maven group:artifact IDs: org.glassfish.hk2.external:jakarta.inject
+
+Home page: https://github.com/eclipse-ee4j/glassfish-hk2
+License: Eclipse Public License 2.0 - https://projects.eclipse.org/license/epl-2.0
+
+--------------------------------------------------------------------------------
+
+This product bundles Java API for RESTful Web Services (JAX-RS) API.
+
+* Maven group:artifact IDs: javax.ws.rs:javax.ws.rs-api
+
+Project URL: https://github.com/eclipse-ee4j/jaxrs-api
+License: Eclipse Public License 2.0 - https://www.eclipse.org/legal/epl-2.0
 
 --------------------------------------------------------------------------------
 
