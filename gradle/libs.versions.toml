@@ -29,8 +29,8 @@ ranger = "2.9.0.3.4.3.1-SNAPSHOT"
 ranger-graalvm = "25.3.4.1"
 scala212 = "2.12.21"
 scala213 = "2.13.18"
-spark35 = "3.5.6"
-spark40 = "4.0.2"
+spark35 = "3.5.8.3.4.3.1-SNAPSHOT"
+spark41 = "4.1.2.3.4.3.1-SNAPSHOT"
 swagger = "1.6.16"
 
 [bundles]
@@ -43,7 +43,7 @@ swagger = "1.6.16"
 #
 agrona = { module = "org.agrona:agrona", version = "2.6.0" }
 antlr4-runtime-spark35 = { module = "org.antlr:antlr4-runtime", version.strictly = "4.9.3" } # spark 3.5 integration tests
-antlr4-runtime-spark40 = { module = "org.antlr:antlr4-runtime", version.strictly = "4.13.1" } # spark 4.0 integration tests
+antlr4-runtime-spark41 = { module = "org.antlr:antlr4-runtime", version.strictly = "4.13.1" } # spark 4.1 integration tests
 apache-httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version = "5.6.4" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.27.7" }
 auth0-jwt = { module = "com.auth0:java-jwt", version = "4.6.1" }

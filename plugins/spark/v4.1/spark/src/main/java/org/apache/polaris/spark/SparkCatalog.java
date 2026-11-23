@@ -28,7 +28,7 @@ import org.apache.spark.sql.connector.catalog.View;
 import org.apache.spark.sql.connector.catalog.ViewCatalog;
 import org.apache.spark.sql.connector.catalog.ViewInfo;
 
-/** Spark 4.0 SparkCatalog implementation. */
+/** Spark 4.1 SparkCatalog implementation. */
 public class SparkCatalog extends BasePolarisSparkCatalog
     implements ViewCatalog, SupportsReplaceView {
 

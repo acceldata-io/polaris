@@ -169,7 +169,7 @@ public class SparkCatalogTest {
     Mockito.when(mockedContext.applicationId()).thenReturn("appId");
     Mockito.when(mockedContext.appName()).thenReturn("test-app");
     Mockito.when(mockedContext.sparkUser()).thenReturn("test-user");
-    Mockito.when(mockedContext.version()).thenReturn("4.0");
+    Mockito.when(mockedContext.version()).thenReturn("4.1.1");
 
     try (MockedStatic<SparkUtil> mockedSparkUtil = Mockito.mockStatic(SparkUtil.class)) {
       mockedSparkUtil

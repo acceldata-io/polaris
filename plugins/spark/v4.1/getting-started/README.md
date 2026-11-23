@@ -28,7 +28,7 @@ A Jupyter notebook is started to run PySpark, and Polaris Python client is also 
 directly through Python Client.
 
 ## Build the Spark Client Jar and Polaris image
-If Spark Client Jar is not presented locally under plugins/spark/v4.0/spark/build/2.13/libs, please build the jar
+If Spark Client Jar is not presented locally under plugins/spark/v4.1/spark/build/2.13/libs, please build the jar
 using
 - `./gradlew assemble` -- build the Polaris project and skip the tests.
 
@@ -45,15 +45,15 @@ If a Polaris image is not already present locally, build one with the following 
 
 To start the `docker-compose` file, run this command from the repo's root directory:
 ```shell
-docker-compose -f plugins/spark/v4.0/getting-started/docker-compose.yml up
+docker-compose -f plugins/spark/v4.1/getting-started/docker-compose.yml up
 ```
 
 This will spin up 2 container services
 * The `polaris` service for running Apache Polaris using an in-memory metastore
 * The `jupyter` service for running Jupyter notebook with PySpark
 
-NOTE: Starting the container first time may take a couple of minutes, because it will need to download the Spark 4.0.2.
-When working with Delta, the Polaris Spark client requires delta-io >= 4.2.0, and it requires at least Spark 4.0.2.
+NOTE: Starting the container first time may take a couple of minutes, because it will need to download Spark 4.1.1.
+When working with Delta, the Polaris Spark client requires delta-io 4.3.1, and it requires Spark 4.1.
 
 ### Run with AWS access setup
 If you want to interact with S3 bucket, make sure you have the following environment variables setup correctly in

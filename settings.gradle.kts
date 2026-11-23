@@ -93,8 +93,12 @@ val sparkVersions = sparkScalaVersions["sparkVersions"].toString().split(",").ma
 
 for (sparkVersion in sparkVersions) {
   val scalaVersionsKey = "scalaVersions.${sparkVersion}"
-  val scalaVersionsStr = sparkScalaVersions[scalaVersionsKey].toString()
-  val scalaVersions = scalaVersionsStr.split(",").map { it.trim() }
+  // Gradle property overrides spark-scala.properties so a build can drop a Scala line
+  // (ODP Spark 3.5 has no 2.13 artifacts) and restore it with -PscalaVersions.<version>=...
+  val scalaVersionsStr =
+    providers.gradleProperty(scalaVersionsKey).orNull
+      ?: sparkScalaVersions[scalaVersionsKey].toString()
+  val scalaVersions = scalaVersionsStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
   var first = true
   for (scalaVersion in scalaVersions) {
     polarisProject(
@@ -163,6 +167,9 @@ fun RepositoryHandler.addAcceldataRepositories() {
 dependencyResolutionManagement {
   repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
   repositories {
+    // mavenLocal() is omitted because Gradle treats it as the sole source for a module once
+    // the POM is present. An incomplete install (for example orc-core without the nohive
+    // classifier jar) then fails resolution instead of falling through to later repositories.
     addAcceldataRepositories()
     mavenCentral()
     val useApacheSnapshots =

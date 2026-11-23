@@ -35,10 +35,10 @@ checkstyle {
 }
 
 // get version information
-val sparkMajorVersion = "4.0"
+val sparkMajorVersion = "4.1"
 val scalaVersion = getAndUseScalaVersionForProject()
 val icebergVersion = libs.versions.iceberg.get()
-val spark40Version = libs.versions.spark40.get()
+val spark41Version = libs.versions.spark41.get()
 
 val scalaLibraryVersion = libs.versions.scala213.get()
 val errorProneAnnotationsVersion = libs.errorprone.get().versionConstraint.requiredVersion
@@ -57,7 +57,7 @@ dependencies {
 
   compileOnly("org.scala-lang:scala-library:${scalaLibraryVersion}")
   compileOnly("org.scala-lang:scala-reflect:${scalaLibraryVersion}")
-  compileOnly("org.apache.spark:spark-sql_${scalaVersion}:${spark40Version}") {
+  compileOnly("org.apache.spark:spark-sql_${scalaVersion}:${spark41Version}") {
     // exclude log4j dependencies
     exclude("org.apache.logging.log4j", "log4j-slf4j2-impl")
     exclude("org.apache.logging.log4j", "log4j-api")
@@ -77,9 +77,9 @@ dependencies {
   testImplementation(libs.mockito.core)
 
   testImplementation(
-    "org.apache.iceberg:iceberg-spark-runtime-4.0_${scalaVersion}:${icebergVersion}"
+    "org.apache.iceberg:iceberg-spark-runtime-${sparkMajorVersion}_${scalaVersion}:${icebergVersion}"
   )
-  testImplementation("org.apache.spark:spark-sql_${scalaVersion}:${spark40Version}") {
+  testImplementation("org.apache.spark:spark-sql_${scalaVersion}:${spark41Version}") {
     // exclude log4j dependencies
     exclude("org.apache.logging.log4j", "log4j-slf4j2-impl")
     exclude("org.apache.logging.log4j", "log4j-api")
@@ -101,22 +101,24 @@ testing {
 
         implementation(project(":polaris-runtime-test-common"))
 
-        implementation("org.apache.spark:spark-sql_${scalaVersion}:${spark40Version}")
+        implementation("org.apache.spark:spark-sql_${scalaVersion}:${spark41Version}")
 
         // Add spark-hive for Hudi integration - provides HiveExternalCatalog that Hudi needs
-        runtimeOnly("org.apache.spark:spark-hive_${scalaVersion}:${spark40Version}")
+        runtimeOnly("org.apache.spark:spark-hive_${scalaVersion}:${spark41Version}")
         // Delta and Hudi initialize Log4j classes from the Spark runtime. Keep Log4j Core aligned
         // with the version used by the Spark tests instead of relying on older Hive transitive
         // deps.
         runtimeOnly("org.apache.logging.log4j:log4j-core:2.26.1")
 
-        implementation("io.delta:delta-spark_${sparkMajorVersion}_${scalaVersion}:4.2.0")
-        implementation("org.apache.hudi:hudi-spark4.0-bundle_${scalaVersion}:1.1.1")
+        implementation("io.delta:delta-spark_${sparkMajorVersion}_${scalaVersion}:4.3.1")
+        implementation(
+          "org.apache.hudi:hudi-spark${sparkMajorVersion}-bundle_${scalaVersion}:1.2.0"
+        )
 
         // The hudi-spark-bundle includes most Hive libraries but excludes hive-exec to keep size
         // manageable
-        // This matches what Spark 4.0 distribution provides (hive-exec-2.3.10-core.jar)
-        implementation("org.apache.hive:hive-exec:2.3.10:core")
+        // This matches what Spark 4.1 distribution provides (hive-exec-2.3.104-core.jar)
+        implementation("org.apache.hive:hive-exec:2.3.104:core")
 
         implementation(platform(libs.jackson.bom))
         implementation("com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider")
@@ -138,7 +140,7 @@ testing {
         implementation(enforcedPlatform("org.scala-lang:scala-library:${scalaLibraryVersion}"))
         implementation(enforcedPlatform("org.scala-lang:scala-reflect:${scalaLibraryVersion}"))
         implementation(libs.javax.servlet.api)
-        implementation(libs.antlr4.runtime.spark40)
+        implementation(libs.antlr4.runtime.spark41)
       }
 
       targets.configureEach {
@@ -206,11 +208,21 @@ listOf("intTestCompileClasspath", "intTestRuntimeClasspath").forEach {
   }
 }
 
-// Force jakarta.servlet-api to 5.0.0 for Spark 4.0 compatibility
-// Spark 4.0 requires version 5.0.0 which includes SingleThreadModel
-// Quarkus BOM forces it to 6.x which removed SingleThreadModel
 configurations.named("intTestRuntimeClasspath") {
-  resolutionStrategy { force("jakarta.servlet:jakarta.servlet-api:5.0.0") }
+  resolutionStrategy {
+    // Spark 4.1 is built against Netty 4.2 (KQueueIoHandler). The Quarkus BOM
+    // otherwise selects Netty 4.1 for this flat test classpath. Leave netty-tcnative
+    // on its 2.x line. The Quarkus application process keeps the BOM's Netty.
+    eachDependency {
+      if (requested.group == "io.netty" && !requested.name.startsWith("netty-tcnative")) {
+        val version = requested.version
+        if (version == null || version.startsWith("4.")) {
+          useVersion("4.2.13.Final")
+          because("Spark 4.1 requires Netty 4.2")
+        }
+      }
+    }
+  }
 }
 
 val createPolarisSparkJar =

@@ -56,7 +56,7 @@ In this setup, a Polaris container will be started in a docker-compose group, us
 previously built by the Gradle build. Then another container, including a Spark SQL shell, will run
 the tests. The exit code will be the same as the exit code of the Spark container. 
 **NOTE** Docker compose only support testing with scala 2.12, because no scala 2.13 image is available
-for spark 3.5. Scala 2.13 will be supported for Spark 4.0.
+for spark 3.5. Scala 2.13 will be supported for Spark 4.1.
 
 This is the flow used in CI and should be done locally before pushing to GitHub to ensure that no
 environmental factors contribute to the outcome of the tests.

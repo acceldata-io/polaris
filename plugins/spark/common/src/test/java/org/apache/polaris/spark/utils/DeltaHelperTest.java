@@ -112,4 +112,57 @@ public class DeltaHelperTest {
     assertThat(deltaCatalog).isNotNull();
     assertThat(deltaCatalog).isInstanceOf(NoopDeltaCatalog.class);
   }
+
+  @Test
+  public void testLoadDeltaCatalogInitializesOptionsDisablingDeltaRestApi() {
+    CaseInsensitiveStringMap options =
+        new CaseInsensitiveStringMap(
+            ImmutableMap.of(
+                DeltaHelper.DELTA_CATALOG_IMPL_KEY,
+                RecordingDeltaCatalog.class.getName(),
+                "uri",
+                "http://localhost"));
+    DeltaHelper helper = new DeltaHelper(options);
+    PolarisSparkCatalog polarisSparkCatalog = mock(PolarisSparkCatalog.class);
+
+    RecordingDeltaCatalog deltaCatalog =
+        (RecordingDeltaCatalog) helper.loadDeltaCatalog(polarisSparkCatalog);
+
+    assertThat(deltaCatalog.capturedOptions.get(DeltaHelper.DELTA_REST_API_ENABLED_KEY))
+        .isEqualTo("false");
+    assertThat(deltaCatalog.capturedOptions.get("uri")).isEqualTo("http://localhost");
+  }
+
+  @Test
+  public void testLoadDeltaCatalogPreservesExplicitDeltaRestApiOption() {
+    CaseInsensitiveStringMap options =
+        new CaseInsensitiveStringMap(
+            ImmutableMap.of(
+                DeltaHelper.DELTA_CATALOG_IMPL_KEY,
+                RecordingDeltaCatalog.class.getName(),
+                DeltaHelper.DELTA_REST_API_ENABLED_KEY,
+                "true"));
+    DeltaHelper helper = new DeltaHelper(options);
+    PolarisSparkCatalog polarisSparkCatalog = mock(PolarisSparkCatalog.class);
+
+    RecordingDeltaCatalog deltaCatalog =
+        (RecordingDeltaCatalog) helper.loadDeltaCatalog(polarisSparkCatalog);
+
+    assertThat(deltaCatalog.capturedOptions.get(DeltaHelper.DELTA_REST_API_ENABLED_KEY))
+        .isEqualTo("true");
+  }
+
+  /** Records {@link DelegatingCatalogExtension#initialize} arguments for DeltaHelper tests. */
+  public static class RecordingDeltaCatalog extends DelegatingCatalogExtension {
+    // Reflectively set by DeltaHelper, matching DeltaCatalog.isUnityCatalog.
+    @SuppressWarnings("unused")
+    private boolean isUnityCatalog = false;
+
+    CaseInsensitiveStringMap capturedOptions;
+
+    @Override
+    public void initialize(String name, CaseInsensitiveStringMap options) {
+      this.capturedOptions = options;
+    }
+  }
 }

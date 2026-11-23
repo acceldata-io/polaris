@@ -32,7 +32,7 @@ import scala.Tuple2;
 import scala.collection.immutable.Map$;
 import scala.collection.mutable.Builder;
 
-/** Spark 4.0 implementation of {@link PolarisCatalogUtils}. */
+/** Spark 4.1 implementation of {@link PolarisCatalogUtils}. */
 public class PolarisCatalogSpark4Utils extends PolarisCatalogUtils {
 
   @Override
