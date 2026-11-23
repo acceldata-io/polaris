@@ -18,6 +18,7 @@
  */
 
 import java.net.URI
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.nosphere.apache.rat.RatTask
 
 buildscript { repositories { maven { url = java.net.URI("https://plugins.gradle.org/m2/") } } }
@@ -51,6 +52,20 @@ if (providers.systemProperty("idea.sync.active").getOrElse("false").toBoolean())
 }
 
 eclipse { project { name = ideName } }
+
+allprojects {
+  configurations.configureEach {
+    // org.lz4:lz4-java:1.8.1 is a relocation POM for at.yawk.lz4:lz4-java and ships no jar.
+    // Both coordinates provide the org.lz4:lz4-java capability, so Gradle reports a conflict.
+    // Prefer the at.yawk.lz4 candidate, which has the jar.
+    resolutionStrategy.capabilitiesResolution.withCapability("org.lz4:lz4-java") {
+      val preferred = candidates.find {
+        (it.id as? ModuleComponentIdentifier)?.group == "at.yawk.lz4"
+      }
+      select(preferred ?: candidates.first())
+    }
+  }
+}
 
 tasks.named<RatTask>("rat").configure {
   // Gradle

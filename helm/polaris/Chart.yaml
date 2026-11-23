@@ -21,8 +21,8 @@ apiVersion: v2
 name: polaris
 description: A Helm chart for Apache Polaris
 type: application
-version: 1.8.0
-appVersion: 1.8.0
+version: 1.8.0.3.4.3.1-SNAPSHOT
+appVersion: 1.8.0.3.4.3.1-SNAPSHOT
 home: https://polaris.apache.org/
 icon: https://raw.githubusercontent.com/apache/polaris/main/site/static/img/logos/polaris-brandmark.png
 sources:
