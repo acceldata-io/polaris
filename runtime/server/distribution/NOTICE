@@ -949,3 +949,21 @@ Orekit with the following copyright notice:
 | Copyright 2010-2012 CS Systèmes d'Information
 
 --------------------------------------------------------------------------------
+
+This product bundles Apache Solr (solr-solrj), which includes the following notice:
+
+Apache Solr
+Copyright 2006-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+Includes software from other Apache Software Foundation projects,
+including, but not limited to:
+  - Apache Lucene Java
+  - Apache Commons
+  - Apache Blur
+  - Apache Hadoop
+
+--------------------------------------------------------------------------------
+

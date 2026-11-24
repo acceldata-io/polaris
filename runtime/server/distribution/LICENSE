@@ -2242,6 +2242,8 @@ This product bundles Apache Ranger libraries.
 * Maven group:artifact IDs: org.apache.ranger:authz-embedded
 * Maven group:artifact IDs: org.apache.ranger:ranger-audit-core
 * Maven group:artifact IDs: org.apache.ranger:ranger-audit-dest-auditserver
+* Maven group:artifact IDs: org.apache.ranger:ranger-audit-dest-hdfs
+* Maven group:artifact IDs: org.apache.ranger:ranger-audit-dest-solr
 * Maven group:artifact IDs: org.apache.ranger:ranger-authz-api
 * Maven group:artifact IDs: org.apache.ranger:ranger-common-utils
 * Maven group:artifact IDs: org.apache.ranger:ranger-plugin-classloader
@@ -2254,6 +2256,21 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 
+This product bundles Jetty libraries.
+
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-client
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-http
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-io
+* Maven group:artifact IDs: org.eclipse.jetty:jetty-util
+
+Also includes Jetty Util Ajax, WebApp, XML, and WebSocket API, client, and common
+components.
+
+Home page: https://github.com/jetty/jetty.project/
+License: Eclipse Public License 2.0 - https://projects.eclipse.org/license/epl-2.0
+
+--------------------------------------------------------------------------------
+
 This product bundles FasterXML libraries.
 
 * Maven group:artifact IDs: com.fasterxml.jackson.jaxrs:jackson-jaxrs-base
@@ -2261,6 +2278,17 @@ This product bundles FasterXML libraries.
 * Maven group:artifact IDs: com.fasterxml.jackson.module:jackson-module-jaxb-annotations
 
 Home page: https://github.com/FasterXML/
+License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
+
+--------------------------------------------------------------------------------
+
+This product bundles HttpComponents libraries.
+
+* Maven group:artifact IDs: org.apache.httpcomponents:httpasyncclient
+* Maven group:artifact IDs: org.apache.httpcomponents:httpcore-nio
+* Maven group:artifact IDs: org.apache.httpcomponents:httpmime
+
+Home page: https://hc.apache.org/
 License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
@@ -2294,6 +2322,15 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 
+This product bundles Commons Lang library.
+
+* Maven group:artifact IDs: commons-lang:commons-lang
+
+Home page: https://github.com/apache/commons-lang
+License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
+
+--------------------------------------------------------------------------------
+
 This product bundles High Performance Primitive Collections library.
 
 * Maven group:artifact IDs: com.carrotsearch:hppc
@@ -2312,6 +2349,15 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 
+This product bundles Apache Solr library.
+
+* Maven group:artifact IDs: org.apache.solr:solr-solrj
+
+Home page: https://github.com/apache/solr
+License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
+
+--------------------------------------------------------------------------------
+
 This product bundles Apache Yetus library.
 
 * Maven group:artifact IDs: org.apache.yetus:audience-annotations
@@ -2324,6 +2370,10 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 This product bundles ASM library.
 
 * Maven group:artifact IDs: org.ow2.asm:asm
+* Maven group:artifact IDs: org.ow2.asm:asm-analysis
+* Maven group:artifact IDs: org.ow2.asm:asm-commons
+* Maven group:artifact IDs: org.ow2.asm:asm-tree
+* Maven group:artifact IDs: org.ow2.asm:asm-util
 
 Home page: https://gitlab.ow2.org/asm/asm
 License: BSD 3-Clause
@@ -2369,8 +2419,11 @@ License: Eclipse Public License 2.0 - https://projects.eclipse.org/license/epl-2
 
 This product bundles Eclipse HK2 libraries.
 
+* Maven group:artifact IDs: org.glassfish.hk2:class-model
 * Maven group:artifact IDs: org.glassfish.hk2:hk2-api
+* Maven group:artifact IDs: org.glassfish.hk2:hk2-core
 * Maven group:artifact IDs: org.glassfish.hk2:hk2-locator
+* Maven group:artifact IDs: org.glassfish.hk2:hk2-runlevel
 * Maven group:artifact IDs: org.glassfish.hk2:hk2-utils
 * Maven group:artifact IDs: org.glassfish.hk2:osgi-resource-locator
 * Maven group:artifact IDs: org.glassfish.hk2.external:aopalliance-repackaged
@@ -2378,6 +2431,15 @@ This product bundles Eclipse HK2 libraries.
 
 Home page: https://github.com/eclipse-ee4j/glassfish-hk2
 License: Eclipse Public License 2.0 - https://projects.eclipse.org/license/epl-2.0
+
+--------------------------------------------------------------------------------
+
+This product bundles Java Injection API (JSR-330).
+
+* Maven group:artifact IDs: javax.inject:javax.inject
+
+Project URL: https://github.com/javaee/javax.inject
+License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 

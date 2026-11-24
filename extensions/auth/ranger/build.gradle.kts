@@ -34,7 +34,6 @@ dependencies {
   implementation(project(":polaris-core"))
 
   implementation(libs.ranger.authz.embedded) {
-    exclude("org.apache.ranger", "ranger-audit-dest-hdfs")
     exclude("org.slf4j", "slf4j-reload4j")
     exclude("ch.qos.reload4j", "reload4j")
     exclude("io.dropwizard.metrics", "metrics-core")
@@ -59,6 +58,18 @@ dependencies {
   runtimeOnly(libs.graalvm.js.js.scriptengine)
   runtimeOnly(libs.graalvm.polyglot.js)
   runtimeOnly(libs.graalvm.polyglot.polyglot)
+  // The audit destinations are declared here, not through authz-embedded, so they need the same
+  // exclusions. Otherwise ranger-audit-core pulls reload4j and metrics-core back in.
+  runtimeOnly(libs.ranger.audit.dest.solr) {
+    exclude("org.slf4j", "slf4j-reload4j")
+    exclude("ch.qos.reload4j", "reload4j")
+    exclude("io.dropwizard.metrics", "metrics-core")
+  }
+  runtimeOnly(libs.ranger.audit.dest.hdfs) {
+    exclude("org.slf4j", "slf4j-reload4j")
+    exclude("ch.qos.reload4j", "reload4j")
+    exclude("io.dropwizard.metrics", "metrics-core")
+  }
 }
 
 testing {
