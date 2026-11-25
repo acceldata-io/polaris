@@ -2443,6 +2443,15 @@ License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
 
 --------------------------------------------------------------------------------
 
+This product bundles Apache Tomcat Annotations API.
+
+* Maven group:artifact IDs: org.apache.tomcat:tomcat-annotations-api
+
+Project URL: https://tomcat.apache.org/
+License: Apache License 2.0 - https://www.apache.org/licenses/LICENSE-2.0.txt
+
+--------------------------------------------------------------------------------
+
 This product bundles Java API for RESTful Web Services (JAX-RS) API.
 
 * Maven group:artifact IDs: javax.ws.rs:javax.ws.rs-api

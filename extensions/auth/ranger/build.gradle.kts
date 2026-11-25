@@ -58,6 +58,11 @@ dependencies {
   runtimeOnly(libs.graalvm.js.js.scriptengine)
   runtimeOnly(libs.graalvm.polyglot.js)
   runtimeOnly(libs.graalvm.polyglot.polyglot)
+  // Ranger 2.9's Jersey 2 client (RangerAdminRESTClient) needs javax.annotation.Priority.
+  // Quarkus manages jakarta.annotation-api to 3.0.0, which has no javax.* package, and quarkus-core
+  // lists javax.annotation:javax.annotation-api in excluded-artifacts, so that jar never reaches
+  // the application. Tomcat 9's annotations API provides the javax class in a different artifact.
+  runtimeOnly(libs.tomcat.annotations.api)
   // The audit destinations are declared here, not through authz-embedded, so they need the same
   // exclusions. Otherwise ranger-audit-core pulls reload4j and metrics-core back in.
   runtimeOnly(libs.ranger.audit.dest.solr) {
