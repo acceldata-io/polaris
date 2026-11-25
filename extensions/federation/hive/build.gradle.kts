@@ -25,6 +25,7 @@ plugins {
 dependencies {
   // Polaris dependencies
   implementation(project(":polaris-core"))
+  implementation(project(":polaris-extensions-federation-hadoop"))
 
   implementation(platform(libs.iceberg.bom))
   implementation("org.apache.iceberg:iceberg-api")
@@ -39,6 +40,9 @@ dependencies {
     exclude("log4j", "log4j")
     exclude("org.apache.zookeeper", "zookeeper")
     exclude("org.ow2.asm", "asm-all")
+    // ODP's hadoop-yarn-client (via tez-api) pulls org.jline:jline with the jdk8 classifier, which
+    // does not exist for the Quarkus-managed version. Only the YARN CLI uses it.
+    exclude("org.jline", "jline")
   }
 
   // Hadoop dependencies

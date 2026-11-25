@@ -228,6 +228,10 @@ testing {
             storageSecretKey = "test-sk-123-hive-federation",
             withHiveRustfsStartupAction = true,
           )
+          // Polaris Hive federation is not compatible with Hive 4 (NoSuchFieldError:
+          // HiveConf$ConfVars.METASTOREURIS), and Hive federation is not part of the ODP package,
+          // so skip this suite.
+          enabled = false
         }
       }
     }

@@ -93,8 +93,12 @@ val sparkVersions = sparkScalaVersions["sparkVersions"].toString().split(",").ma
 
 for (sparkVersion in sparkVersions) {
   val scalaVersionsKey = "scalaVersions.${sparkVersion}"
-  val scalaVersionsStr = sparkScalaVersions[scalaVersionsKey].toString()
-  val scalaVersions = scalaVersionsStr.split(",").map { it.trim() }
+  // Gradle property overrides spark-scala.properties so a build can drop a Scala line
+  // (ODP Spark 3.5 has no 2.13 artifacts) and restore it with -PscalaVersions.<version>=...
+  val scalaVersionsStr =
+    providers.gradleProperty(scalaVersionsKey).orNull
+      ?: sparkScalaVersions[scalaVersionsKey].toString()
+  val scalaVersions = scalaVersionsStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
   var first = true
   for (scalaVersion in scalaVersions) {
     polarisProject(
@@ -128,9 +132,45 @@ plugins {
   id("com.gradle.common-custom-user-data-gradle-plugin") version "2.8.0"
 }
 
+fun MavenArtifactRepository.acceldataCredentials() {
+  val usernameProvider =
+    providers
+      .gradleProperty("mavenUsername")
+      .orElse(providers.gradleProperty("acceldataRepoUsername"))
+      .orElse(providers.environmentVariable("ACCELDATA_REPO_USERNAME"))
+  val passwordProvider =
+    providers
+      .gradleProperty("mavenPassword")
+      .orElse(providers.gradleProperty("acceldataRepoPassword"))
+      .orElse(providers.environmentVariable("ACCELDATA_REPO_PASSWORD"))
+  if (usernameProvider.isPresent && passwordProvider.isPresent) {
+    credentials {
+      username = usernameProvider.get()
+      password = passwordProvider.get()
+    }
+  }
+}
+
+fun RepositoryHandler.addAcceldataRepositories() {
+  maven {
+    name = "acceldata"
+    url = uri("https://repo1.acceldata.dev/repository/odp-staging-central/")
+    acceldataCredentials()
+  }
+  maven {
+    name = "acceldataStaging"
+    url = uri("https://repo1.acceldata.dev/repository/odp-staging-central/")
+    acceldataCredentials()
+  }
+}
+
 dependencyResolutionManagement {
   repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
   repositories {
+    // mavenLocal() is omitted because Gradle treats it as the sole source for a module once
+    // the POM is present. An incomplete install (for example orc-core without the nohive
+    // classifier jar) then fails resolution instead of falling through to later repositories.
+    addAcceldataRepositories()
     mavenCentral()
     val useApacheSnapshots =
       providers.gradleProperty("useApacheSnapshots").orNull?.toBoolean() == true
